@@ -1,5 +1,6 @@
 # Python environments / IDE extensions
 .jpy_ext/
+.jyp_env/
 .venv/
 env/
 conda/

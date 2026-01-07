@@ -1,6 +1,14 @@
 # 🌾 Crop Yield Prediction System  
 **An Explainable, Production-Oriented Machine Learning Pipeline Using Earth Observation Data**
 
+> **Research-first repository**
+>
+> This project is structured primarily as a **research-grade machine learning study**
+> on crop yield prediction using Earth observation data.
+>
+> The API and dashboard components serve as **reference implementations**
+> to demonstrate deployment feasibility and are not the primary research artifacts.
+
 ---
 
 ## Overview
@@ -20,6 +28,17 @@ Unlike notebook-centric ML experiments, this system is designed around the **com
 - and deployment readiness.
 
 The system is inspired by **operational Earth science ML practices** (e.g., NASA-style workflows), prioritizing **scientific validity and interpretability** over speculative forecasting.
+
+---
+
+## Research Questions
+
+This research investigates:
+
+1. How effectively can seasonal NDVI and climate variables predict regional crop yield?
+2. Do NDVI–climate interaction features outperform climate-only baselines?
+3. How does soil organic carbon (SOC) influence vegetation–yield relationships?
+4. Can explainable ML methods (SHAP) provide agronomically meaningful insights?
 
 ---
 
@@ -126,30 +145,74 @@ This reflects **best practices in operational Earth observation ML systems**.
 
 ---
 
+## Evaluation Methodology
+
+Models are evaluated using:
+
+- Root Mean Squared Error (RMSE)
+- Mean Absolute Error (MAE)
+- R² score
+
+Temporal splits are used to prevent data leakage.  
+Baseline comparisons include climate-only and NDVI-only models, with ablation studies assessing the contribution of engineered features.
+
+---
+
+## Repository Structure
+
+The repository is organized to clearly separate **research artifacts**
+from **system and deployment components**.
+
+### Research Components
+- `analysis/` — Exploratory data analysis and hypothesis testing
+- `notebook/` — Research notebooks and experiments
+- `evaluation/` — Model evaluation and metrics
+- `pipelines/` — Reproducible ML pipelines
+- `steps/` — Modular pipeline steps
+
+### Core ML Logic
+- `src/` — Feature engineering, NDVI processing, explainability
+- `data/` — Raw and processed datasets
+- `models/` — Trained models and preprocessors
+
+### Reference Implementations
+- `api/` — FastAPI inference service
+- `dashboard/` — Streamlit dashboard
+
+> Deployment components are included to demonstrate real-world feasibility
+> and are not required for reproducing the research results.
+
+---
+
 ## System Architecture (High Level)
 
-Raw Data
-├── NDVI (Satellite)
-├── Climate Variables
-├── Soil Data
-└── Yield Records
-↓
-Data Ingestion & Validation
-↓
-Feature Engineering
-↓
-Preprocessing Pipeline
-↓
-Trained ML Model
-↓
-FastAPI Inference Service
-↓
-Prediction + SHAP Explanation
+Raw Data  
+├── NDVI (Satellite)  
+├── Climate Variables  
+├── Soil Data  
+└── Yield Records  
+↓  
+Data Ingestion & Validation  
+↓  
+Feature Engineering  
+↓  
+Preprocessing Pipeline  
+↓  
+Trained ML Model  
+↓  
+FastAPI Inference Service  
+↓  
+Prediction + SHAP Explanation  
 
-Yield Prediction
+---
 
-POST /predict?explain=false
+## API Usage Example
 
+### Yield Prediction
+
+**POST** `/predict?explain=false`
+
+```json
 {
   "state": "Punjab",
   "district": "Ludhiana",
@@ -157,6 +220,7 @@ POST /predict?explain=false
   "season": "Rabi",
   "year": 2021
 }
+
 
 {
   "predicted_yield": 3.66
