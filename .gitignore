@@ -14,19 +14,22 @@ __pycache__/
 
 # Virtual environments
 .env
-.venv/
 venv/
-conda-meta/
 
 # Jupyter
 .ipynb_checkpoints/
 
-# Data
+# Data (controlled tracking)
 data/raw/
 data/interim/
-data/Processed/
+data/Processed/**
 
-# Models
+# Allow only final processed outputs
+!data/Processed/versions/
+!data/Processed/versions/features_engineered_v12.csv
+!data/Processed/versions/merged_output.csv
+
+# Models (ignore binaries)
 models/*.joblib
 models/*.pkl
 models/*.bin
@@ -34,3 +37,6 @@ models/*.bin
 # OS
 .DS_Store
 Thumbs.db
+
+# Analysis (local only)
+analysis/
