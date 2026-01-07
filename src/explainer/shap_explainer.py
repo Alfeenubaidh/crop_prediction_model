@@ -1,24 +1,55 @@
-import shap
 import pandas as pd
 import numpy as np
-import joblib
-from typing import List
+from typing import Dict
 
 
-def compute_shap_values(
-    X_encoded: np.ndarray,
-    model_path: str,
-    feature_names: List[str],
-) -> pd.DataFrame:
+class ShapExplainer:
+    """
+    Lazy SHAP explainer for tree-based models.
+    SHAP is imported ONLY when explainability is requested.
+    """
 
-    model = joblib.load(model_path)
+    def __init__(self, model):
+        try:
+            import shap
+        except ImportError as e:
+            raise ImportError(
+                "SHAP is not installed. Install with: pip install shap"
+            ) from e
 
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X_encoded)
+        self.shap = shap
+        self.explainer = shap.TreeExplainer(model)
 
-    shap_df = pd.DataFrame(
-        shap_values,
-        columns=feature_names
-    )
+    def explain(
+        self,
+        X_encoded: pd.DataFrame,
+        top_k: int = 5,
+    ) -> Dict[str, float]:
+        """
+        Compute SHAP values for a single inference row.
+        Returns top-k most influential features.
+        """
 
-    return shap_df
+        shap_values = self.explainer.shap_values(X_encoded)
+
+        # Convert to DataFrame
+        shap_df = pd.DataFrame(
+            shap_values,
+            columns=X_encoded.columns,
+        )
+
+        # Take first row (single prediction)
+        row = shap_df.iloc[0]
+
+        # Sort by absolute impact
+        top_features = (
+            row.abs()
+            .sort_values(ascending=False)
+            .head(top_k)
+            .index
+        )
+
+        return {
+            feature: float(row[feature])
+            for feature in top_features
+        }

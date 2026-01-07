@@ -1,22 +1,23 @@
 import os
 import joblib
-import yaml
 
 
 class ModelLoader:
-    def __init__(self, config_path="config.yaml"):
-        with open(config_path) as f:
-            self.config = yaml.safe_load(f)
+    """
+    Loads the trained student model for inference.
+    """
 
-        self.model_path = os.path.join(
-            self.config["paths"]["project_root"],
-            "models",
-            "saved_model.pkl"
-        )
+    def __init__(self, model_path: str = "models/student_lightgbm.joblib"):
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found: {model_path}")
 
-        self.model = None
+        self.model_path = model_path
+        self._model = None
 
-    def load(self):
-        if self.model is None:
-            self.model = joblib.load(self.model_path)
-        return self.model
+    def load_model(self):
+        """
+        Load model once and cache it.
+        """
+        if self._model is None:
+            self._model = joblib.load(self.model_path)
+        return self._model

@@ -231,3 +231,9 @@ evaluation:
 
   save_report: true
   report_filename: "evaluation_report.json"
+
+explain:
+  enabled: true
+  method: shap
+  max_samples: 1000   # safety for speed
+

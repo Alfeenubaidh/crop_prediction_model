@@ -1,6 +1,24 @@
+# Environments
 .venv/
 env/
+
+# Python
 __pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data
 data/raw/
 data/extracted/
-.ipynb_checkpoints/
+*.csv
+*.parquet
+
+# Models & artifacts
+*.joblib
+*.pkl
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,33 +1,70 @@
-from fastapi import FastAPI
-from api.schemas import PredictionRequest, PredictionResponse
-from api.model_loader import ModelLoader
-from api.predict import Predictor
-from api.feature_builder import FeatureBuilder
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
-MODEL_DIR = "models"
+from api.schemas import UserInputRequest, PredictionResponse
+from api.predict import predict_yield
 
 app = FastAPI(
     title="Crop Yield Prediction API",
-    version="1.0.0"
+    description="Inference API for crop yield prediction with optional SHAP explainability",
+    version="1.0.0",
 )
 
-# ---------------- LOAD ARTIFACTS ----------------
-model = ModelLoader().load()
+# ------------------------------------------------------------
+# CONFIG
+# ------------------------------------------------------------
+MAX_DATA_YEAR = 2022  # last year with available NDVI/weather data
 
-feature_builder = FeatureBuilder(
-    preprocessor_path=f"{MODEL_DIR}/preprocessor.joblib",
-    feature_schema_path=f"{MODEL_DIR}/feature_schema.json",
+# ------------------------------------------------------------
+# CORS (safe default for dashboards)
+# ------------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-predictor = Predictor(model, feature_builder)
-
-
+# ------------------------------------------------------------
+# Health check
+# ------------------------------------------------------------
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-
+# ------------------------------------------------------------
+# Prediction endpoint
+# ------------------------------------------------------------
 @app.post("/predict", response_model=PredictionResponse)
-def predict_yield(request: PredictionRequest):
-    prediction = predictor.predict(request.dict())
-    return PredictionResponse(predicted_yield=prediction)
+def predict(
+    request: UserInputRequest,
+    explain: bool = Query(
+        default=False,
+        description="Set true to include SHAP explanation",
+    ),
+):
+    try:
+        # ----------------------------------------------------
+        # Restrict predictions to available data years
+        # ----------------------------------------------------
+        if request.year > MAX_DATA_YEAR:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Prediction beyond {MAX_DATA_YEAR} is not supported. "
+                    "Future-year prediction requires forecast NDVI/weather data."
+                ),
+            )
+
+        # predict_yield already returns the final response dict
+        return predict_yield(
+            payload=request.dict(),
+            explain=explain,
+        )
+
+    except HTTPException:
+        # keep FastAPI errors unchanged
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
