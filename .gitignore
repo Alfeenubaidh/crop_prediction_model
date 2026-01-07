@@ -1,23 +1,34 @@
-# Environments
+# Python environments / IDE extensions
+.jpy_ext/
 .venv/
 env/
+conda/
+conda-meta/
 
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.env
+.venv/
+venv/
+conda-meta/
 
 # Jupyter
 .ipynb_checkpoints/
 
 # Data
 data/raw/
-data/extracted/
-*.csv
-*.parquet
+data/interim/
+data/Processed/
 
-# Models & artifacts
-*.joblib
-*.pkl
+# Models
+models/*.joblib
+models/*.pkl
+models/*.bin
 
 # OS
 .DS_Store
