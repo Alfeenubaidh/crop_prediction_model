@@ -1,61 +1,30 @@
 paths:
-  project_root: "D:/Crop_yield_system"
+  project_root: "<PROJECT_ROOT>"
 
   raw_dir: "data/raw"
-  extracted_data_dir: "data"
-  processed_dir: "data/Processed"
-  processed_filename: "features_engineered.csv"
-
-  merged_output_dir: "data/Processed/versions"
-  inference_input: "data/new_input.csv"
+  processed_dir: "data/processed"
+  merged_output_dir: "data/processed/versions"
 
   model_dir: "models"
-  teacher_model_name: "teacher_stacking.joblib"
-  student_model_name: "student_lightgbm.joblib"
-
   evaluation_dir: "evaluation"
-
-  inference_input: "data/new_input.csv"
-  deployment_model: "models/student_lightgbm.joblib"
-  predictions_dir: "predictions"
-  predictions_filename: "predictions.csv"
 
 data_sources:
   weather:
-    start_date: "20110101"
-    end_date:   "20251231"
+    start_date: "YYYYMMDD"
+    end_date: "YYYYMMDD"
     states:
-      Punjab: [31.1471, 75.3412]
-      Haryana: [29.0588, 76.0856]
-      Rajasthan: [27.0238, 74.2179]
-      Uttar Pradesh: [26.8467, 80.9462]
-      Chandigarh: [30.7333, 76.7794]
+      <STATE_NAME>: [<LAT>, <LON>]
 
   ndvi:
-    path: "data/raw/NDVI_states_2011_2022.csv"
-    local_file: "data/raw/NDVI_states_2011_2022.csv"
-    start_year: 2019
+    path: "data/raw/ndvi_data.csv"
+    start_year: 2011
     end_year: 2022
-    states:
-      - "Punjab"
-      - "Haryana"
-      - "Rajasthan"
-      - "Uttar Pradesh"
-      - "Chandigarh"
 
   soc:
-    local_file: "D:/Crop_yield_system/data/raw/india_states_soc_stats.csv"
-    shapefile: "D:/gadm41_IND_1.shp"
-    raster: "D:/soc_0-5cm_mean_30s.tif"
-    states_of_interest:
-      - "Punjab"
-      - "Haryana"
-      - "Rajasthan"
-      - "Uttar Pradesh"
-      - "Chandigarh"
+    local_file: "data/raw/soc_stats.csv"
 
   yield:
-    path: "data/raw/crop_yield_2011_2022_seasonal.csv"
+    path: "data/raw/yield_data.csv"
 
 merge:
   required_keys:
@@ -63,177 +32,35 @@ merge:
     - "Year"
     - "Season"
 
-  ndvi_season_method: "mean"
-  weather_merge_how: "left"
-  ndvi_merge_how: "left"
-  soc_merge_how: "left"
-
 settings:
   drop_rows_with_missing_yield: true
-  remove_duplicates: true
-  sort_rows: true
 
 preprocessing:
   outliers:
     method: "iqr_groupwise"
     iqr_multiplier: 1.5
-    group_column: "State"
-    groupby:
-      - "State"
-      - "Season"
-
-    numeric_columns:
-      - "Yield"
-      - "NDVI_SeasonalMean"
-      - "T2M"
-      - "T2M_MAX"
-      - "T2M_MIN"
-      - "PRECTOTCORR"
-      - "ALLSKY_SFC_SW_DWN"
-      - "RH2M"
-      - "WS2M"
-      - "Mean_SOC"
-      - "Median_SOC"
-      - "Min_SOC"
-      - "Max_SOC"
-      - "Std_SOC"
-
-  missing_values:
-    weather:
-      method: "interpolate"
-      columns:
-        - "T2M"
-        - "T2M_MAX"
-        - "T2M_MIN"
-        - "PRECTOTCORR"
-        - "ALLSKY_SFC_SW_DWN"
-        - "RH2M"
-        - "WS2M"
-
-    ndvi:
-      ndvi_bins: [-1, 0.2, 0.4, 0.6, 0.8, 1.0]
-      ndvi_labels:
-        - "very_low"
-        - "low"
-        - "moderate"
-        - "high"
-        - "very_high"
-
-    soc:
-      method: "median"
-      columns:
-        - "Mean_SOC"
-        - "Median_SOC"
-        - "Min_SOC"
-        - "Max_SOC"
-        - "Std_SOC"
-
-    yield:
-      method: "drop_missing"
-      columns:
-        - "Yield"
 
 feature_engineering:
-  agricultural:
-    high_yield_percentile: 90
-
   climate:
     temp_stress_threshold: 35.0
-    temp_column: "T2M"
-
-  ndvi_features:
-    ndvi_column: "NDVI_SeasonalMean"
-    ndvi_bins: [-1.0, 0.2, 0.4, 0.6, 0.8, 1.0]
-    ndvi_labels:
-      - "very_low"
-      - "low"
-      - "moderate"
-      - "high"
-      - "very_high"
-
-  soil_features: {}
-
-  season_features:
-    season_map:
-      Kharif: 1
-      Rabi: 2
-      Zaid: 3
-
-  state_features:
-    region_map:
-      Punjab: "North"
-      Haryana: "North"
-      Rajasthan: "West"
-      Uttar Pradesh: "North"
-      Chandigarh: "North"
-
-    agro_zone_map:
-      Punjab: "Indo-Gangetic"
-      Haryana: "Indo-Gangetic"
-      Rajasthan: "Arid"
-      Uttar Pradesh: "Indo-Gangetic"
-      Chandigarh: "Urban"
-
-  interaction_features:
-    custom_interactions:
-      - name: "NDVI_div_Rain"
-        left: "NDVI_SeasonalMean"
-        right: "PRECTOTCORR"
-        op: "div"
 
 data_split:
   train_size: 0.7
   val_size: 0.15
   test_size: 0.15
-  shuffle: true
-  random_seed: 42
 
 model:
   teacher:
     type: "stacking_regressor"
-    save_name: "teacher_stacking.joblib"
-
-    base_models:
-      - "RandomForestRegressor"
-      - "GradientBoostingRegressor"
-      - "Lasso"
-      - "ElasticNet"
-
-    meta_model: "LinearRegression"
-    params:
-      random_state: 42
-      n_jobs: -1
 
   student:
     type: "lightgbm"
-    save_name: "student_lightgbm.joblib"
-
-    params:
-      learning_rate: 0.05
-      n_estimators: 300
-      num_leaves: 31
-      max_depth: -1
-      random_state: 42
-      n_jobs: -1
-
-  deployment:
-    strategy: "best"
-    metric: "rmse"
 
 evaluation:
   metrics:
     - "rmse"
-    - "r2"
     - "mae"
-
-  save_predictions: true
-  predictions_filename: "evaluation_predictions.csv"
-
-  save_report: true
-  report_filename: "evaluation_report.json"
 
 explain:
   enabled: true
   method: shap
-  max_samples: 1000   # safety for speed
-
