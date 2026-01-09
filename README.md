@@ -225,4 +225,3 @@ The following example demonstrates the **inference contract and output schema**.
   }
 }
 
----
