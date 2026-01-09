@@ -1,42 +1,63 @@
+# =========================================================
 # Python environments / IDE extensions
+# =========================================================
 .jpy_ext/
 .jyp_env/
 .venv/
+venv/
 env/
 conda/
 conda-meta/
 
-# Python
+# =========================================================
+# Python bytecode / caches
+# =========================================================
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Virtual environments
+# =========================================================
+# Environment / secrets
+# =========================================================
 .env
-venv/
 
+# =========================================================
 # Jupyter
+# =========================================================
 .ipynb_checkpoints/
 
+# =========================================================
 # Data (controlled tracking)
+# =========================================================
 data/raw/
 data/interim/
 data/Processed/**
 
 # Allow only final processed outputs
+!data/Processed/
 !data/Processed/versions/
 !data/Processed/versions/features_engineered_v12.csv
 !data/Processed/versions/merged_output.csv
 
-# Models (ignore binaries)
+# =========================================================
+# Models (ignore binaries / trained artifacts)
+# =========================================================
 models/*.joblib
 models/*.pkl
 models/*.bin
+models/*.h5
+models/*.onnx
 
-# OS
+# =========================================================
+# OS / Editor
+# =========================================================
 .DS_Store
 Thumbs.db
+.vscode/
+.zen/
 
+# =========================================================
 # Analysis (local only)
+# =========================================================
 analysis/

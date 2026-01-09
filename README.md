@@ -1,33 +1,46 @@
 # 🌾 Crop Yield Prediction System  
-**An Explainable, Production-Oriented Machine Learning Pipeline Using Earth Observation Data**
+**An Explainable, Research-First Machine Learning Pipeline Using Earth Observation Data**
 
-> **Research-first repository**
->
-> This project is structured primarily as a **research-grade machine learning study**
-> on crop yield prediction using Earth observation data.
->
-> The API and dashboard components serve as **reference implementations**
-> to demonstrate deployment feasibility and are not the primary research artifacts.
+---
+
+## Repository Positioning (Important)
+
+This repository is a **research-grade machine learning project** focused on
+crop yield prediction using Earth observation data.
+
+While the repository contains **API and dashboard components**, these are
+**reference implementations only**, included to demonstrate how the research
+outputs *can* be operationalized.
+
+> ⚠️ **This repository is NOT a commercial product.**  
+> Production deployment, scalability, security, and business logic are
+> intentionally out of scope.
+
+Future commercial systems should implement **independent APIs, dashboards,
+and infrastructure**.
 
 ---
 
 ## Overview
 
-This project implements an **end-to-end, production-ready machine learning system** for **regional crop yield prediction** using:
+This project implements an **end-to-end, production-oriented research pipeline**
+for **regional crop yield prediction** using:
 
-- satellite-derived vegetation indices (NDVI),
-- climate variables (temperature, rainfall, humidity, wind),
-- soil organic carbon (SOC),
-- and historical yield dynamics.
+- Satellite-derived vegetation indices (NDVI)
+- Climate variables (temperature, rainfall, humidity, wind)
+- Soil Organic Carbon (SOC)
+- Historical yield observations
 
-Unlike notebook-centric ML experiments, this system is designed around the **complete ML lifecycle**, with explicit emphasis on:
+Unlike notebook-only experiments, the system is designed around the **full
+machine learning lifecycle**, with emphasis on:
 
 - reproducibility,
-- feature parity between training and inference,
+- strict feature parity between training and inference,
 - explainability,
-- and deployment readiness.
+- and operational feasibility.
 
-The system is inspired by **operational Earth science ML practices** (e.g., NASA-style workflows), prioritizing **scientific validity and interpretability** over speculative forecasting.
+The project follows **Earth observation ML best practices**, prioritizing
+**scientific validity and interpretability** over speculative forecasting.
 
 ---
 
@@ -38,7 +51,7 @@ This research investigates:
 1. How effectively can seasonal NDVI and climate variables predict regional crop yield?
 2. Do NDVI–climate interaction features outperform climate-only baselines?
 3. How does soil organic carbon (SOC) influence vegetation–yield relationships?
-4. Can explainable ML methods (SHAP) provide agronomically meaningful insights?
+4. Can explainable ML methods (SHAP) produce agronomically meaningful insights?
 
 ---
 
@@ -50,98 +63,99 @@ Many crop-yield ML studies stop at:
 
 This project goes further:
 
-> *“The system predicts, explains, validates assumptions, and can be deployed safely.”*
+> *“The system predicts, explains, validates assumptions, and can be safely operationalized.”*
 
-It is designed as a **decision-support system** rather than a black-box predictor, making it suitable for **real-world agricultural analysis and policy-facing applications**.
+It is designed as a **decision-support system**, not a black-box predictor,
+making it suitable for **agricultural analysis, research, and policy-facing work**.
 
 ---
 
-## Intended Use and Real-World Applicability
+## Intended Use
 
-This system is intended to support:
+This system is intended for:
 
-- agricultural extension agencies,
-- policy and planning teams,
-- crop insurance and agri-finance analysts,
-- climate–yield researchers.
+- agricultural research,
+- extension and advisory analysis,
+- policy and planning studies,
+- climate–yield impact assessment.
 
-Given observed vegetation, climate, and soil conditions for a growing season, the system:
+Given observed vegetation, climate, and soil conditions for a growing season,
+the system:
 
 - estimates expected crop yield,
-- identifies dominant environmental drivers affecting yield,
+- identifies dominant environmental drivers,
 - supports post-season assessment and early risk analysis.
 
-The system **explicitly avoids extrapolating beyond observed environmental data**, prioritizing trustworthiness and scientific discipline.
+The system **does not extrapolate beyond observed environmental data**, ensuring
+trustworthy and scientifically disciplined outputs.
 
 ---
 
 ## Key Contributions
 
 ### 1. Multi-Source Data Integration
-- Satellite-based NDVI (vegetation health)
-- Climate variables (temperature, rainfall, humidity, wind)
-- Soil organic carbon (SOC)
+- NDVI (satellite vegetation health)
+- Climate variables
+- Soil Organic Carbon (SOC)
 - Historical yield records
 
-All data sources are harmonized temporally and spatially.
+All sources are harmonized temporally and spatially.
 
 ---
 
 ### 2. Domain-Aware Feature Engineering
 
-Feature engineering incorporates agronomic knowledge rather than raw signals alone, including:
+Feature engineering incorporates agronomic reasoning, including:
 
-- NDVI–climate interaction terms
+- NDVI–climate interaction features
 - NDVI–SOC hybrid indicators
-- Vegetation stress and anomaly features
+- Vegetation stress and anomaly metrics
 - Temporal lag features
-- Rolling window statistics (multi-year context)
+- Rolling window statistics
 
-This reduces reliance on model memorization and improves interpretability.
+This improves interpretability and reduces overfitting.
 
 ---
 
 ### 3. Explainable Machine Learning (SHAP)
 
-Explainability is treated as a **first-class system component**:
+Explainability is treated as a **first-class component**:
 
 - Feature-level contribution analysis
 - Case-based explanations for individual predictions
-- Top contributing environmental drivers per inference
+- Identification of dominant environmental drivers
 
-This enables **transparent interpretation**, critical for agricultural and policy-facing systems.
+This transparency is critical for agricultural and policy-facing systems.
 
 ---
 
-### 4. Production-Oriented System Design
+### 4. Production-Oriented Research Design
 
-The system follows production ML best practices:
+The system follows production ML principles without being a deployed product:
 
+- Modular pipeline design
 - Configuration-driven execution
-- Modular pipeline architecture
 - Clear separation of ingestion, features, modeling, inference, and explanation
-- Schema validation at API boundaries
+- Schema validation at inference boundaries
 - Lazy loading of heavy components (models, explainers)
 
 ---
 
 ## Prediction Scope and Temporal Constraints
 
-Although the model architecture supports inference for arbitrary years, **predictions are restricted to years with observed NDVI and climate data**.
+Predictions are restricted to years with **observed NDVI and climate data**.
 
-This design choice is intentional.
+- NDVI observations: **2011–2022**
+- Climate variables aligned to the same period
 
-- NDVI observations are available for **2011–2022**
-- Climate variables align with the same temporal window
-- Tree-based models (e.g., LightGBM) do not extrapolate reliably without future covariates
+This constraint is intentional:
 
-To avoid silent feature drift and misleading outputs, the system enforces a hard constraint on prediction years.  
+- Tree-based models do not extrapolate reliably without future covariates
+- Prevents silent feature drift and misleading predictions
+
 Future-year predictions require either:
-
 - projected climate inputs, or
 - scenario-based NDVI estimates.
-
-This reflects **best practices in operational Earth observation ML systems**.
 
 ---
 
@@ -153,62 +167,39 @@ Models are evaluated using:
 - Mean Absolute Error (MAE)
 - R² score
 
-Temporal splits are used to prevent data leakage.  
-Baseline comparisons include climate-only and NDVI-only models, with ablation studies assessing the contribution of engineered features.
+Temporal splits are used to prevent data leakage.
+Baseline comparisons include climate-only and NDVI-only models, with ablation
+studies assessing the contribution of engineered features.
 
 ---
 
 ## Repository Structure
 
-The repository is organized to clearly separate **research artifacts**
-from **system and deployment components**.
+The repository separates **research artifacts** from **reference system components**.
 
 ### Research Components
-- `analysis/` — Exploratory data analysis and hypothesis testing
 - `notebook/` — Research notebooks and experiments
 - `evaluation/` — Model evaluation and metrics
-- `pipelines/` — Reproducible ML pipelines
-- `steps/` — Modular pipeline steps
+- `steps/` — Modular, research-oriented pipeline steps
+- `pipelines/` — Reproducible research pipelines
 
 ### Core ML Logic
 - `src/` — Feature engineering, NDVI processing, explainability
-- `data/` — Raw and processed datasets
-- `models/` — Trained models and preprocessors
+- `data/` — Sample and processed datasets (no proprietary raw data)
+- `models/` — Research model artifacts (not production models)
 
 ### Reference Implementations
-- `api/` — FastAPI inference service
-- `dashboard/` — Streamlit dashboard
+- `api/` — Reference FastAPI inference service
+- `dashboard/` — Demonstration dashboard for visualization
 
-> Deployment components are included to demonstrate real-world feasibility
-> and are not required for reproducing the research results.
-
----
-
-## System Architecture (High Level)
-
-Raw Data  
-├── NDVI (Satellite)  
-├── Climate Variables  
-├── Soil Data  
-└── Yield Records  
-↓  
-Data Ingestion & Validation  
-↓  
-Feature Engineering  
-↓  
-Preprocessing Pipeline  
-↓  
-Trained ML Model  
-↓  
-FastAPI Inference Service  
-↓  
-Prediction + SHAP Explanation  
+> The `api/` and `dashboard/` directories are **illustrative only** and are not
+> intended for real-world production deployment.
 
 ---
 
-## API Usage Example
+## API Reference Example (Illustrative Only)
 
-### Yield Prediction
+The following example demonstrates the **inference contract and output schema**.
 
 **POST** `/predict?explain=false`
 
@@ -221,13 +212,9 @@ Prediction + SHAP Explanation
   "year": 2021
 }
 
-
 {
   "predicted_yield": 3.66
 }
-
-
-POST /predict?explain=true
 
 {
   "predicted_yield": 3.66,
@@ -238,3 +225,4 @@ POST /predict?explain=true
   }
 }
 
+---
