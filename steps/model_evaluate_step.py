@@ -26,13 +26,22 @@ def evaluation_run(
     y_test: pd.Series,
 ) -> Dict[str, float]:
     """
-    Evaluate trained model on test data.
-    Saves predictions + evaluation report.
+    Evaluate trained regression model on test data.
+
+    Metrics:
+    - RMSE
+    - R²
+    - MAE
+    - Accuracy (%) = R² × 100
+
+    Saves:
+    - evaluation_predictions.csv
+    - evaluation_report.json
     """
 
     logger.info("========== EVALUATION STEP STARTED ==========")
 
-    # ---------------- CONFIG ----------------
+    # ---------------- LOAD CONFIG ----------------
     with open(CONFIG_PATH, "r") as f:
         cfg = yaml.safe_load(f)
 
@@ -41,7 +50,7 @@ def evaluation_run(
     eval_dir = os.path.join(project_root, paths.get("evaluation_dir", "evaluation"))
     os.makedirs(eval_dir, exist_ok=True)
 
-    # ---------------- LOAD ARTIFACTS ----------------
+    # ---------------- LOAD MODEL + ENCODER ----------------
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model not found: {model_path}")
 
@@ -61,23 +70,30 @@ def evaluation_run(
         feature_names = encoder.get_feature_names_out(X_test.columns)
         X_test_df = pd.DataFrame(X_test_enc, columns=feature_names, index=X_test.index)
     except Exception:
+        # Safe fallback (never crash evaluation)
         X_test_df = pd.DataFrame(X_test_enc, index=X_test.index)
 
     # ---------------- PREDICTION ----------------
     logger.info("Running predictions...")
     preds = model.predict(X_test_df)
 
+    # ---------------- METRICS ----------------
     mse = mean_squared_error(y_test, preds)
     rmse = mse ** 0.5
     r2 = r2_score(y_test, preds)
     mae = mean_absolute_error(y_test, preds)
 
-    logger.info("===== EVALUATION RESULTS =====")
-    logger.info(f"RMSE: {rmse:.6f}")
-    logger.info(f"R²:   {r2:.6f}")
-    logger.info(f"MAE:  {mae:.6f}")
+    # ✅ REGRESSION ACCURACY (R²-based)
+    accuracy_percent = max(0.0, r2) * 100.0
 
-    # ---------------- SAVE OUTPUTS ----------------
+    # ---------------- LOG RESULTS ----------------
+    logger.info("===== EVALUATION RESULTS =====")
+    logger.info(f"RMSE:     {rmse:.6f}")
+    logger.info(f"R²:       {r2:.6f}")
+    logger.info(f"MAE:      {mae:.6f}")
+    logger.info(f"Accuracy: {accuracy_percent:.2f}%")
+
+    # ---------------- SAVE PREDICTIONS ----------------
     preds_df = pd.DataFrame({
         "index": X_test.index,
         "y_true": y_test.values,
@@ -86,19 +102,27 @@ def evaluation_run(
 
     preds_path = os.path.join(
         eval_dir,
-        cfg.get("evaluation", {}).get("predictions_filename", "evaluation_predictions.csv")
+        cfg.get("evaluation", {}).get(
+            "predictions_filename",
+            "evaluation_predictions.csv"
+        )
     )
     preds_df.to_csv(preds_path, index=False)
 
+    # ---------------- SAVE REPORT ----------------
     report = {
         "rmse": float(rmse),
         "r2": float(r2),
         "mae": float(mae),
+        "accuracy_percent": float(accuracy_percent),
     }
 
     report_path = os.path.join(
         eval_dir,
-        cfg.get("evaluation", {}).get("report_filename", "evaluation_report.json")
+        cfg.get("evaluation", {}).get(
+            "report_filename",
+            "evaluation_report.json"
+        )
     )
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)
@@ -111,6 +135,7 @@ def evaluation_run(
         "rmse": rmse,
         "r2": r2,
         "mae": mae,
+        "accuracy_percent": accuracy_percent,
         "predictions_path": preds_path,
         "report_path": report_path,
     }

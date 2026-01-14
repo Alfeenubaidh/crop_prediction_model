@@ -1,4 +1,3 @@
-# src/feature_engineering.py
 """
 Extended Feature Engineering for Crop Yield Prediction.
 FINAL VERSION — TRAINING = INFERENCE
@@ -27,12 +26,22 @@ class FeatureEngineering:
 
         self.config = config
         self.ndvi_path = config.get("data_sources", {}).get("ndvi", {}).get("path")
+
         self.ndvi_col = "NDVI_SeasonalMean"
         self.rain_col = "PRECTOTCORR"
+        self.temp_col = "T2M"
 
         self.soc_columns = [
             "Mean_SOC", "Median_SOC", "Min_SOC", "Max_SOC", "Std_SOC"
         ]
+
+    # =====================================================
+    # SAFE ACCESSOR (CRITICAL)
+    # =====================================================
+    def _safe_series(self, df: pd.DataFrame, col: str, default: float = 0.0) -> pd.Series:
+        if col in df.columns:
+            return df[col].astype(float)
+        return pd.Series(default, index=df.index, dtype=float)
 
     # =====================================================
     # MAIN PIPELINE
@@ -78,6 +87,7 @@ class FeatureEngineering:
         req = {"State", "Year", "Month", "NDVI"}
         if not req.issubset(df.columns):
             raise KeyError("NDVI monthly file missing columns")
+
         df["Year"] = df["Year"].apply(self._normalize_year)
         df["Month"] = df["Month"].astype(int)
         df["NDVI"] = pd.to_numeric(df["NDVI"], errors="coerce")
@@ -108,7 +118,7 @@ class FeatureEngineering:
         q = g.quantile([0.25, 0.75]).unstack()
         out["NDVI_SeasonalQ1"] = q.get(0.25, np.nan).values
         out["NDVI_SeasonalQ3"] = q.get(0.75, np.nan).values
-        out["NDVI_SeasonalStd"] = out["NDVI_SeasonalStd"].fillna(0)
+        out["NDVI_SeasonalStd"] = out["NDVI_SeasonalStd"].fillna(0.0)
 
         return out
 
@@ -121,22 +131,17 @@ class FeatureEngineering:
     def _add_ndvi_variability_metrics(self, df):
         if self.ndvi_col not in df:
             return df
+
         df["NDVI_Range"] = df["NDVI_SeasonalMax"] - df["NDVI_SeasonalMin"]
         df["NDVI_IQR"] = df["NDVI_SeasonalQ3"] - df["NDVI_SeasonalQ1"]
         df["NDVI_Std_Norm"] = df["NDVI_SeasonalStd"] / (df[self.ndvi_col].abs() + 1e-6)
         return df
 
     def _create_ndvi_rain_interactions(self, df):
-        df = df.copy()
-
-        if "NDVI_SeasonalMean" not in df:
-            return df
-
-        ndvi = df["NDVI_SeasonalMean"].astype(float)
-        rain = df.get(self.rain_col, pd.Series([0] * len(df))).astype(float)
+        ndvi = self._safe_series(df, self.ndvi_col)
+        rain = self._safe_series(df, self.rain_col)
         eps = 1e-6
 
-        # Required interaction features (USED IN TRAINING)
         df["NDVI_plus_Rain"] = ndvi + rain
         df["NDVI_minus_Rain"] = ndvi - rain
         df["NDVI_mul_Rain"] = ndvi * rain
@@ -144,7 +149,6 @@ class FeatureEngineering:
         df["Rain_div_NDVI"] = rain / (ndvi + eps)
         df["NDVI_Rain_Ratio"] = ndvi / (rain + eps)
 
-        # Anomalies
         df["NDVI_anomaly"] = ndvi - ndvi.groupby(
             [df["State"], df["Season"]]
         ).transform("median")
@@ -155,10 +159,10 @@ class FeatureEngineering:
 
         return df
 
-
     def _create_ndvi_temp_interactions(self, df):
-        ndvi = df.get(self.ndvi_col, 0).astype(float)
-        temp = df.get("T2M", 0).astype(float)
+        ndvi = self._safe_series(df, self.ndvi_col)
+        temp = self._safe_series(df, self.temp_col)
+
         df["Temp_NDVI"] = temp * ndvi
         df["NDVI_Temp_Interaction"] = df["Temp_NDVI"]
         return df
@@ -173,32 +177,34 @@ class FeatureEngineering:
                 return "moderate"
             return "high"
 
-        df["NDVI_Level"] = df.get(self.ndvi_col, 0.5).apply(level)
+        df["NDVI_Level"] = self._safe_series(df, self.ndvi_col, 0.5).apply(level)
         return df
 
     def _create_ndvi_soc_interactions(self, df):
-        ndvi = df.get(self.ndvi_col, 0).astype(float)
+        ndvi = self._safe_series(df, self.ndvi_col)
         eps = 1e-6
 
         for c in self.soc_columns:
             if c not in df:
                 continue
+
             soc = df[c].astype(float)
             df[f"{c}_NDVI_mul"] = soc * ndvi
             df[f"{c}_NDVI_div"] = ndvi / (soc + eps)
             df[f"{c}_SOC_div_NDVI"] = soc / (ndvi + eps)
             df[f"{c}_NDVI_Hybrid"] = 0.5 * ndvi + 0.5 * (soc / (soc.max() + eps))
             df[f"{c}_NDVI_Stress"] = (1 - ndvi) * (1 - (soc / (soc.max() + eps)))
+
         return df
 
     def _add_ndvi_stress_indicators(self, df):
-        ndvi = df.get(self.ndvi_col, 0).astype(float)
+        ndvi = self._safe_series(df, self.ndvi_col)
         df["NDVI_Drought_Flag"] = (ndvi < 0.3).astype(int)
         return df
 
     def _add_rain_ndvi_efficiency(self, df):
-        ndvi = df.get(self.ndvi_col, 0).astype(float)
-        rain = df.get(self.rain_col, 0).astype(float)
+        ndvi = self._safe_series(df, self.ndvi_col)
+        rain = self._safe_series(df, self.rain_col)
         eps = 1e-6
 
         df["NDVI_efficiency_per_mmRain"] = ndvi / (rain + eps)
@@ -210,7 +216,9 @@ class FeatureEngineering:
         df = df.sort_values(group_cols + ["Year"])
         for src in ["Yield", self.ndvi_col, self.rain_col]:
             if src in df:
-                df[f"{src}_Lag{lag_years}"] = df.groupby(group_cols)[src].shift(lag_years)
+                df[f"{src}_Lag{lag_years}"] = (
+                    df.groupby(group_cols)[src].shift(lag_years)
+                )
         return df
 
     def _add_rolling_features(self, df, group_cols, window=3):
@@ -222,15 +230,21 @@ class FeatureEngineering:
         }.items():
             if col in df:
                 df[f"{label}_RollingMean_{window}"] = (
-                    df.groupby(group_cols)[col].rolling(window).mean().reset_index(level=[0,1], drop=True)
+                    df.groupby(group_cols)[col]
+                    .rolling(window)
+                    .mean()
+                    .reset_index(level=[0, 1], drop=True)
                 )
                 df[f"{label}_RollingStd_{window}"] = (
-                    df.groupby(group_cols)[col].rolling(window).std().reset_index(level=[0,1], drop=True)
+                    df.groupby(group_cols)[col]
+                    .rolling(window)
+                    .std()
+                    .reset_index(level=[0, 1], drop=True)
                 )
         return df
 
     def _finalize(self, df):
         for c in df.columns:
             if any(k in c for k in ["mul", "div", "Hybrid", "Stress", "Rolling"]):
-                df[c] = df[c].fillna(0)
+                df[c] = df[c].fillna(0.0)
         return df

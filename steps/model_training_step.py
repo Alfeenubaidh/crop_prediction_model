@@ -32,22 +32,29 @@ def _make_onehot_encoder():
         return OneHotEncoder(handle_unknown="ignore", sparse=False)
 
 
-def _get_feature_names(ct: ColumnTransformer, input_features):
-    try:
-        return ct.get_feature_names_out(input_features)
-    except Exception:
-        names = []
-        for name, transformer, cols in ct.transformers_:
-            if transformer == "drop":
-                continue
-            if transformer == "passthrough":
-                names.extend(cols)
-                continue
-            if hasattr(transformer, "get_feature_names_out"):
-                names.extend(transformer.get_feature_names_out(cols))
-            else:
-                names.extend(cols)
-        return names
+def _build_feature_names(
+    X: pd.DataFrame,
+    preprocessor: ColumnTransformer
+) -> list[str]:
+    """
+    Deterministic feature name builder.
+    NO sklearn introspection.
+    """
+
+    num_cols = X.select_dtypes(include=[np.number]).columns.tolist()
+    cat_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
+
+    feature_names = []
+
+    # Numeric features (imputer + scaler keep names)
+    feature_names.extend(num_cols)
+
+    # Categorical features (explicit expansion)
+    ohe = preprocessor.named_transformers_["cat"].named_steps["onehot"]
+    cat_expanded = ohe.get_feature_names_out(cat_cols)
+    feature_names.extend(cat_expanded.tolist())
+
+    return feature_names
 
 
 @step(enable_cache=False)
@@ -59,18 +66,9 @@ def training_run(
     X_test: pd.DataFrame,
     y_test: pd.Series,
 ) -> Tuple[str, str, str, pd.DataFrame, pd.Series]:
-    """
-    RETURNS (STRICT ORDER):
-    1. teacher_model_path
-    2. student_model_path
-    3. encoder_path
-    4. X_test
-    5. y_test
-    """
 
     logger.info("========== TRAINING STEP STARTED ==========")
 
-    # ---------------- CONFIG ----------------
     with open(CONFIG_PATH, "r") as f:
         cfg = yaml.safe_load(f)
 
@@ -106,7 +104,7 @@ def training_run(
         sparse_threshold=0.0
     )
 
-    # ---------------- TEACHER MODEL ----------------
+    # ---------------- TEACHER ----------------
     base_learners = [
         ("xgb", XGBRegressor(n_estimators=600, learning_rate=0.05, max_depth=6, verbosity=0)),
         ("lgbm", LGBMRegressor(n_estimators=500, learning_rate=0.05)),
@@ -139,24 +137,23 @@ def training_run(
     encoder_path = os.path.join(model_dir, ENCODER_NAME)
     joblib.dump(fitted_preprocessor, encoder_path)
 
-    # ---------------- ENCODE DATA ----------------
+    # ---------------- ENCODE ----------------
     X_train_enc = fitted_preprocessor.transform(X_train)
     X_test_enc = fitted_preprocessor.transform(X_test)
 
-    feature_names = _get_feature_names(fitted_preprocessor, X_train.columns)
+    feature_names = _build_feature_names(X_train, fitted_preprocessor)
 
     X_train_enc_df = pd.DataFrame(X_train_enc, columns=feature_names)
     X_test_enc_df = pd.DataFrame(X_test_enc, columns=feature_names)
 
-    # ---------------- 🔒 FEATURE SCHEMA LOCK ----------------
+    # ---------------- SCHEMA LOCK ----------------
     schema_path = os.path.join(model_dir, FEATURE_SCHEMA_NAME)
     with open(schema_path, "w") as f:
         json.dump(feature_names, f, indent=2)
 
-    # Also keep joblib version (optional but useful)
     joblib.dump(feature_names, os.path.join(model_dir, "feature_columns.joblib"))
 
-    # ---------------- STUDENT MODEL ----------------
+    # ---------------- STUDENT ----------------
     student_cfg = cfg.get("model", {}).get("student", {}).get("params", {})
     student = LGBMRegressor(
         n_estimators=student_cfg.get("n_estimators", 300),
@@ -173,7 +170,6 @@ def training_run(
 
     logger.info("========== TRAINING STEP FINISHED ==========")
 
-    
     return (
         teacher_path,
         student_path,
