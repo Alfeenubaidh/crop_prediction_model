@@ -5,7 +5,7 @@ from pathlib import Path
 from api.schemas import UserInputRequest
 from api.feature_builder import FeatureBuilder
 from api.model_loader import ModelLoader
-from src.explainer.shap_explainer import ShapExplainer
+from src.explainer.shap_explainer_research import ShapExplainer
 
 
 # ============================================================
