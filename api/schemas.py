@@ -1,80 +1,47 @@
-from pydantic import BaseModel, Field, validator
-from typing import Literal, Optional, Dict
+from pydantic import BaseModel
+from typing import Optional, Dict, List
 
 
-# ============================================================
-# INTERNAL SCHEMA (MODEL-READY FEATURES)
-# ============================================================
-
-class ModelFeatureRequest(BaseModel):
-    """
-    Internal schema.
-    Used ONLY when features are already engineered
-    (e.g., batch inference, offline experiments).
-    """
-
-    State: str
-    Year: int
-    Season: str
-
-    T2M: float
-    T2M_MAX: float
-    T2M_MIN: float
-    PRECTOTCORR: float
-    ALLSKY_SFC_SW_DWN: float
-    RH2M: float
-    WS2M: float
-
-    NDVI_SeasonalMean: float
-
-    Mean_SOC: float
-    Median_SOC: float
-    Min_SOC: float
-    Max_SOC: float
-    Std_SOC: float
+# =========================
+# BUSINESS INPUT SCHEMA
+# =========================
+class ClimateInputs(BaseModel):
+    avg_temperature: float
+    max_temperature: float
+    min_temperature: float
+    total_rainfall: float
+    solar_radiation: float
+    relative_humidity: float
+    wind_speed: float
 
 
-# ============================================================
-# USER-FACING SCHEMA (API / DASHBOARD INPUT)
-# ============================================================
-
-class UserInputRequest(BaseModel):
-    """
-    Human-facing input schema.
-    Used by FastAPI and Streamlit dashboard.
-    """
-
-    state: str = Field(..., min_length=2, max_length=50)
-    district: str = Field(..., min_length=2, max_length=50)
-
-    crop: Literal[
-        "Wheat",
-        "Rice",
-        "Maize",
-        "Millet",
-        "Barley",
-    ]
-
-    season: Literal[
-        "Kharif",
-        "Rabi",
-        "Zaid",
-    ]
-
-    year: int = Field(..., ge=2000, le=2030)
-
-    # ----------------------------
-    # Normalization
-    # ----------------------------
-    @validator("state", "district")
-    def normalize_text(cls, v: str) -> str:
-        return v.strip().title()
+class SoilInputs(BaseModel):
+    soil_organic_carbon: float
 
 
-# ============================================================
-# RESPONSE SCHEMA
-# ============================================================
+class VegetationInputs(BaseModel):
+    ndvi_early: float
 
-class PredictionResponse(BaseModel):
-    predicted_yield: float
-    explanation: Optional[Dict[str, float]] = None
+
+
+class BusinessInputRequest(BaseModel):
+    location_id: str
+    agro_climatic_zone: str
+    crop: str
+    season: str
+
+    climate: ClimateInputs
+    soil: SoilInputs
+    vegetation: VegetationInputs
+
+
+# =========================
+# BUSINESS OUTPUT
+# =========================
+class YieldPredictionResponse(BaseModel):
+    expected_yield: float
+    yield_lower: float
+    yield_upper: float
+    risk_level: str
+    confidence: str
+    key_drivers: List[str]

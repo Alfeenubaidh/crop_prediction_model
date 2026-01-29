@@ -51,7 +51,9 @@ class FeatureEngineering:
         df["Year"] = df["Year"].apply(self._normalize_year)
 
         if not {"State", "Year", "Season"}.issubset(df.columns):
-            raise KeyError("DataFrame must include State, Year, Season")
+            logger.warning("Missing State/Year/Season columns — skipping feature engineering")
+            return df
+
 
         # NDVI merge
         if self.ndvi_path and os.path.exists(self.ndvi_path):

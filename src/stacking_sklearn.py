@@ -1,4 +1,3 @@
-# src/stacking_sklearn.py
 
 import pandas as pd
 import numpy as np
@@ -120,7 +119,7 @@ class SklearnStackingEnsembler:
 
     def evaluate(self, X_test, y_test):
         preds = self.pipeline.predict(X_test)
-        rmse = mean_squared_error(y_test, preds, squared=False)
+        rmse = mean_squared_error(y_test, preds)
         r2 = r2_score(y_test, preds)
         return rmse, r2
 

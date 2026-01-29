@@ -46,10 +46,10 @@ def _build_feature_names(
 
     feature_names = []
 
-    # Numeric features (imputer + scaler keep names)
+    # Numeric features
     feature_names.extend(num_cols)
 
-    # Categorical features (explicit expansion)
+    # Categorical expanded features
     ohe = preprocessor.named_transformers_["cat"].named_steps["onehot"]
     cat_expanded = ohe.get_feature_names_out(cat_cols)
     feature_names.extend(cat_expanded.tolist())
@@ -78,8 +78,10 @@ def training_run(
 
     TEACHER_NAME = paths.get("teacher_model_name", "teacher_stacking.joblib")
     STUDENT_NAME = paths.get("student_model_name", "student_lightgbm.joblib")
-    ENCODER_NAME = "preprocessor.joblib"
-    FEATURE_SCHEMA_NAME = "feature_schema.json"
+
+    PREPROCESSOR_NAME = "preprocessor.joblib"
+    FEATURE_SCHEMA_JSON = "feature_schema.json"
+    FEATURE_COLUMNS_JOBLIB = "feature_columns.joblib"
 
     # ---------------- FEATURES ----------------
     cat_cols = X_train.select_dtypes(include=["object", "category"]).columns.tolist()
@@ -130,12 +132,13 @@ def training_run(
     logger.info("Training TEACHER model...")
     teacher_pipeline.fit(X_train, y_train)
 
+    # Save teacher
     teacher_path = os.path.join(model_dir, TEACHER_NAME)
     joblib.dump(teacher_pipeline, teacher_path)
 
+    # Save fitted preprocessor
     fitted_preprocessor = teacher_pipeline.named_steps["preprocessor"]
-    encoder_path = os.path.join(model_dir, ENCODER_NAME)
-    joblib.dump(fitted_preprocessor, encoder_path)
+    joblib.dump(fitted_preprocessor, os.path.join(model_dir, PREPROCESSOR_NAME))
 
     # ---------------- ENCODE ----------------
     X_train_enc = fitted_preprocessor.transform(X_train)
@@ -147,11 +150,13 @@ def training_run(
     X_test_enc_df = pd.DataFrame(X_test_enc, columns=feature_names)
 
     # ---------------- SCHEMA LOCK ----------------
-    schema_path = os.path.join(model_dir, FEATURE_SCHEMA_NAME)
-    with open(schema_path, "w") as f:
+    with open(os.path.join(model_dir, FEATURE_SCHEMA_JSON), "w") as f:
         json.dump(feature_names, f, indent=2)
 
-    joblib.dump(feature_names, os.path.join(model_dir, "feature_columns.joblib"))
+    joblib.dump(
+        feature_names,
+        os.path.join(model_dir, FEATURE_COLUMNS_JOBLIB)
+    )
 
     # ---------------- STUDENT ----------------
     student_cfg = cfg.get("model", {}).get("student", {}).get("params", {})
@@ -173,7 +178,7 @@ def training_run(
     return (
         teacher_path,
         student_path,
-        encoder_path,
+        os.path.join(model_dir, PREPROCESSOR_NAME),
         X_test,
         y_test,
     )
