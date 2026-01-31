@@ -91,7 +91,6 @@ def evaluation_run(
     logger.info(f"RMSE:     {rmse:.6f}")
     logger.info(f"R²:       {r2:.6f}")
     logger.info(f"MAE:      {mae:.6f}")
-    logger.info(f"Accuracy: {accuracy_percent:.2f}%")
 
     # ---------------- SAVE PREDICTIONS ----------------
     preds_df = pd.DataFrame({
@@ -114,7 +113,6 @@ def evaluation_run(
         "rmse": float(rmse),
         "r2": float(r2),
         "mae": float(mae),
-        "accuracy_percent": float(accuracy_percent),
     }
 
     report_path = os.path.join(
@@ -135,7 +133,6 @@ def evaluation_run(
         "rmse": rmse,
         "r2": r2,
         "mae": mae,
-        "accuracy_percent": accuracy_percent,
         "predictions_path": preds_path,
         "report_path": report_path,
     }
