@@ -131,13 +131,26 @@ class FeatureEngineering:
     # FEATURE BLOCKS
     # =====================================================
     def _add_ndvi_variability_metrics(self, df):
-        if self.ndvi_col not in df:
+        required_cols = [
+            "NDVI_SeasonalMax",
+            "NDVI_SeasonalMin",
+            "NDVI_SeasonalQ1",
+            "NDVI_SeasonalQ3",
+            "NDVI_SeasonalStd",
+        ]
+
+        # Defensive check: only compute variability metrics if all required columns exist
+        if not all(col in df.columns for col in required_cols):
             return df
 
         df["NDVI_Range"] = df["NDVI_SeasonalMax"] - df["NDVI_SeasonalMin"]
         df["NDVI_IQR"] = df["NDVI_SeasonalQ3"] - df["NDVI_SeasonalQ1"]
-        df["NDVI_Std_Norm"] = df["NDVI_SeasonalStd"] / (df[self.ndvi_col].abs() + 1e-6)
+        df["NDVI_Std_Norm"] = (
+            df["NDVI_SeasonalStd"] / (df[self.ndvi_col].abs() + 1e-6)
+        )
+
         return df
+
 
     def _create_ndvi_rain_interactions(self, df):
         ndvi = self._safe_series(df, self.ndvi_col)

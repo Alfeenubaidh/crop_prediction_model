@@ -1,70 +1,84 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+import traceback
 
-from api.schemas import UserInputRequest, PredictionResponse
+from api.schemas import BusinessInputRequest, YieldPredictionResponse
 from api.predict import predict_yield
 
+
+# ============================================================
+# FASTAPI APP
+# ============================================================
 app = FastAPI(
-    title="Crop Yield Prediction API",
-    description="Inference API for crop yield prediction with optional SHAP explainability",
-    version="1.0.0",
+    title="Crop Yield Intelligence API",
+    description=(
+        "Business-grade, scenario-based crop yield estimation API. "
+        "Predictions are independent of calendar year and support "
+        "forecasted climate, soil, and vegetation inputs."
+    ),
+    version="2.0.0",
 )
 
-# ------------------------------------------------------------
-# CONFIG
-# ------------------------------------------------------------
-MAX_DATA_YEAR = 2022  # last year with available NDVI/weather data
-
-# ------------------------------------------------------------
-# CORS (safe default for dashboards)
-# ------------------------------------------------------------
+# ============================================================
+# CORS (safe default for dashboards & SaaS)
+# ============================================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],   # restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ------------------------------------------------------------
+# ============================================================
 # Health check
-# ------------------------------------------------------------
+# ============================================================
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-# ------------------------------------------------------------
-# Prediction endpoint
-# ------------------------------------------------------------
-@app.post("/predict", response_model=PredictionResponse)
+
+# ============================================================
+# Prediction endpoint (BUSINESS)
+# ============================================================
+@app.post("/predict", response_model=dict)
 def predict(
-    request: UserInputRequest,
+    request: BusinessInputRequest,
     explain: bool = Query(
         default=False,
-        description="Set true to include SHAP explanation",
+        description="Set true to include SHAP-based explanation",
     ),
 ):
+    """
+    Scenario-based yield estimation.
+    Accepts forecast or assumed climate, soil, and vegetation inputs.
+    """
+
     try:
         # ----------------------------------------------------
-        # Restrict predictions to available data years
+        # CALL CORE BUSINESS INFERENCE
         # ----------------------------------------------------
-        if request.year > MAX_DATA_YEAR:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Prediction beyond {MAX_DATA_YEAR} is not supported. "
-                    "Future-year prediction requires forecast NDVI/weather data."
-                ),
-            )
-
-        # predict_yield already returns the final response dict
-        return predict_yield(
+        result = predict_yield(
             payload=request.dict(),
             explain=explain,
         )
 
+        return result
+
     except HTTPException:
-        # keep FastAPI errors unchanged
+        # Let FastAPI-native errors pass through unchanged
         raise
+
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        # ----------------------------------------------------
+        # 🔥 DO NOT HIDE THE REAL ERROR (CRITICAL FOR DEBUGGING)
+        # ----------------------------------------------------
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
+        )

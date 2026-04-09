@@ -9,12 +9,12 @@ from steps.outlier_detection_step import handle_outliers_step
 from steps.feature_engineering_step import feature_engineering_step
 from steps.data_splitter_step import data_split_step
 from steps.model_training_step import training_run
+from steps.export_test_set_step import export_test_set_step
 from steps.model_evaluate_step import evaluation_run
 
 
 @pipeline(enable_cache=False)
 def training_pipeline(config: dict):
-
     # ======================================================
     # 1. DATA INGESTION
     # ======================================================
@@ -84,6 +84,14 @@ def training_pipeline(config: dict):
         y_val=y_val,
         X_test=X_test,
         y_test=y_test,
+    )
+
+    # ======================================================
+    # 7.5 EXPORT TEST SET FOR EXPERIMENTS (CRITICAL)
+    # ======================================================
+    export_test_set_step(
+        X_test=X_test_out,
+        y_test=y_test_out,
     )
 
     # ======================================================

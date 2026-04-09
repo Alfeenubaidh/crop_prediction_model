@@ -7,7 +7,7 @@
   "ALLSKY_SFC_SW_DWN",
   "RH2M",
   "WS2M",
-  "NDVI_SeasonalMean_x",
+  "NDVI_SeasonalMean",
   "Mean_SOC",
   "Median_SOC",
   "Min_SOC",
@@ -53,9 +53,12 @@
   "Rain_to_NDVI_Ratio",
   "NDVI_Rain_Hybrid",
   "Yield_Lag1",
+  "NDVI_SeasonalMean_Lag1",
   "PRECTOTCORR_Lag1",
   "Yield_RollingMean_3",
   "Yield_RollingStd_3",
+  "NDVI_RollingMean_3",
+  "NDVI_RollingStd_3",
   "Rain_RollingMean_3",
   "Rain_RollingStd_3",
   "State_CHANDIGARH",
@@ -64,5 +67,6 @@
   "State_RAJASTHAN",
   "State_UTTAR PRADESH",
   "Season_Rabi",
+  "NDVI_Level_low",
   "NDVI_Level_moderate"
 ]

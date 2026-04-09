@@ -1,71 +1,128 @@
-from typing import Dict, Tuple, Optional
-import numpy as np
+from typing import Dict
 from pathlib import Path
 
-from api.schemas import UserInputRequest
-from api.feature_builder import FeatureBuilder
-from api.model_loader import ModelLoader
-from src.explainer.shap_explainer_research import ShapExplainer
+from api.schemas import (
+    BusinessInputRequest,
+    YieldPredictionResponse
+)
+from api.business.feature_builder import BusinessFeatureBuilder
+from api.models.model_loader import ModelLoader
+from src.explainer.shap_explainer_buisness import compute_shap_values
 
 
 # ============================================================
-# Lazy singletons (loaded once per process)
+# Paths
 # ============================================================
-
-_feature_builder: FeatureBuilder | None = None
-_model = None
-_shap_explainer: ShapExplainer | None = None
 BASE_DIR = Path(__file__).resolve().parents[1]
+MODEL_DIR = BASE_DIR / "models"
 
 
-def _get_feature_builder() -> FeatureBuilder:
+# ============================================================
+# Feature names (MUST match training & feature builder order)
+# ============================================================
+FEATURE_NAMES = [
+    "avg_temperature",
+    "max_temperature",
+    "min_temperature",
+    "total_rainfall",
+    "solar_radiation",
+    "relative_humidity",
+    "wind_speed",
+    "soil_organic_carbon",
+    "ndvi_early",
+]
+
+
+# ============================================================
+# Lazy singletons
+# ============================================================
+_feature_builder = None
+_model = None
+
+
+def _get_feature_builder() -> BusinessFeatureBuilder:
     global _feature_builder
     if _feature_builder is None:
-        _feature_builder = FeatureBuilder(
-            preprocessor_path=str(BASE_DIR / "models" / "preprocessor.joblib"),
-            feature_schema_path=str(BASE_DIR / "models" / "encoded_feature_schema.json"),
-            base_data_path=str(
-                BASE_DIR / "data" / "Processed" / "versions" / "merged_output.csv"
-            ),
-            config_path=str(BASE_DIR / "config.yaml"),
-        )
+        _feature_builder = BusinessFeatureBuilder()
     return _feature_builder
 
 
 def _get_model():
     global _model
     if _model is None:
-        loader = ModelLoader()
-        _model = loader.load_model()
+        _model = ModelLoader(
+            model_path=str(MODEL_DIR / "student_lightgbm.joblib")
+        ).load_model()
     return _model
 
 
-def _get_shap_explainer() -> ShapExplainer:
-    global _shap_explainer
-    if _shap_explainer is None:
-        _shap_explainer = ShapExplainer(_get_model())
-    return _shap_explainer
-
-
 # ============================================================
-# PUBLIC INFERENCE ENTRY POINT
+# Core prediction function
 # ============================================================
+def predict_yield(payload: Dict, explain: bool = False) -> Dict:
+    """
+    Business-grade, scenario-based yield prediction.
+    Independent of calendar year.
+    """
 
-def predict_yield(payload: Dict, explain: bool = False):
-    request = UserInputRequest(**payload)
+    # --------------------------------------------------------
+    # 1️⃣ Validate request
+    # --------------------------------------------------------
+    request = BusinessInputRequest(**payload)
 
-    X_enc = _get_feature_builder().build(request.dict())
+    # --------------------------------------------------------
+    # 2️⃣ Build business features (NumPy array: shape = (1, 9))
+    # --------------------------------------------------------
+    X = _get_feature_builder().build(request)
+
+    # --------------------------------------------------------
+    # 3️⃣ Predict yield
+    # --------------------------------------------------------
     model = _get_model()
+    y_pred = float(model.predict(X)[0])
 
-    y_pred = float(model.predict(X_enc)[0])
+    # --------------------------------------------------------
+    # 4️⃣ Simple uncertainty band (±10%)
+    # --------------------------------------------------------
+    lower = y_pred * 0.9
+    upper = y_pred * 1.1
 
+    # --------------------------------------------------------
+    # 5️⃣ Risk classification (transparent rules)
+    # --------------------------------------------------------
+    risk = "Low"
+    if request.climate.max_temperature > 35 or request.climate.total_rainfall < 300:
+        risk = "Medium"
+    if request.climate.max_temperature > 40:
+        risk = "High"
+
+    # --------------------------------------------------------
+    # 6️⃣ Optional SHAP explainability
+    # --------------------------------------------------------
     explanation = None
     if explain:
-        explainer = _get_shap_explainer()
-        explanation = explainer.explain(X_enc)
+        explanation = compute_shap_values(
+            X_encoded=X,
+            model_path=str(MODEL_DIR / "student_lightgbm.joblib"),
+            feature_names=FEATURE_NAMES,
+        ).iloc[0].to_dict()
 
+    # --------------------------------------------------------
+    # 7️⃣ Business-safe response
+    # --------------------------------------------------------
     return {
-        "predicted_yield": y_pred,
-        "explanation": explanation
+        "prediction": YieldPredictionResponse(
+            expected_yield=round(y_pred, 2),
+            yield_lower=round(lower, 2),
+            yield_upper=round(upper, 2),
+            risk_level=risk,
+            confidence="High",
+            key_drivers=[
+                "Early NDVI",
+                "Seasonal rainfall",
+                "Temperature stress",
+                "Soil organic carbon",
+            ],
+        ).dict(),
+        "explanation": explanation,
     }
-
