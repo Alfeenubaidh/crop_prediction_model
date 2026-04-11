@@ -27,12 +27,12 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Sprout, 
-  LayoutDashboard, 
-  History, 
-  Settings, 
-  LogOut, 
+import {
+  Sprout,
+  LayoutDashboard,
+  History,
+  Settings,
+  LogOut,
   User as UserIcon,
   ChevronRight,
   Droplets,
@@ -42,7 +42,9 @@ import {
   ShieldCheck,
   BarChart3,
   Users,
-  Activity
+  Activity,
+  MapPin,
+  Calendar
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { predictCrop, PredictionInputs, PredictionResult } from './services/predictionService';
@@ -227,6 +229,9 @@ const Home = ({ onStart }: { onStart: () => void }) => (
 
 const PredictionForm = ({ onSubmit, loading }: { onSubmit: (data: PredictionInputs) => void, loading: boolean }) => {
   const [formData, setFormData] = useState<PredictionInputs>({
+    state: 'PUNJAB',
+    year: 2022,
+    season: 'Rabi',
     temperature: 25,
     humidity: 60,
     rainfall: 100,
@@ -239,9 +244,10 @@ const PredictionForm = ({ onSubmit, loading }: { onSubmit: (data: PredictionInpu
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    const stringFields = ['soilType', 'state', 'season'];
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'soilType' ? value : parseFloat(value)
+      [name]: stringFields.includes(name) ? value : parseFloat(value)
     }));
   };
 
@@ -253,6 +259,49 @@ const PredictionForm = ({ onSubmit, loading }: { onSubmit: (data: PredictionInpu
       </div>
       
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="p-10 grid md:grid-cols-2 gap-8">
+        <div className="md:col-span-2 grid md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-emerald-600" />
+              State
+            </label>
+            <select
+              name="state" value={formData.state} onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-50 focus:border-emerald-500 focus:outline-none transition-colors bg-white"
+            >
+              <option value="PUNJAB">Punjab</option>
+              <option value="HARYANA">Haryana</option>
+              <option value="RAJASTHAN">Rajasthan</option>
+              <option value="UTTAR PRADESH">Uttar Pradesh</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-emerald-600" />
+              Year
+            </label>
+            <input
+              type="number" name="year" value={formData.year} onChange={handleChange}
+              min={2000} max={2022}
+              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-50 focus:border-emerald-500 focus:outline-none transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+              <Sprout className="w-4 h-4 text-emerald-600" />
+              Season
+            </label>
+            <select
+              name="season" value={formData.season} onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-50 focus:border-emerald-500 focus:outline-none transition-colors bg-white"
+            >
+              <option value="Rabi">Rabi</option>
+              <option value="Kharif">Kharif</option>
+              <option value="Zaid">Zaid</option>
+            </select>
+          </div>
+        </div>
+
         <div className="space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-bold text-emerald-900 flex items-center gap-2">
@@ -361,7 +410,7 @@ const ResultDisplay = ({ result, onReset }: { result: PredictionResult, onReset:
         <div className="bg-white/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-md">
           <Sprout className="w-10 h-10 text-white" />
         </div>
-        <h3 className="text-sm font-bold uppercase tracking-[0.2em] mb-2 opacity-80">Recommended Crop</h3>
+        <h3 className="text-sm font-bold uppercase tracking-[0.2em] mb-2 opacity-80">Predicted Yield</h3>
         <h2 className="text-5xl font-black mb-4">{result.crop}</h2>
         <div className="inline-flex items-center gap-2 bg-emerald-900/40 px-4 py-2 rounded-full backdrop-blur-sm">
           <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
