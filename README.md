@@ -1,375 +1,233 @@
-<<<<<<< HEAD
-# 🌾 Crop Yield Prediction System  
-**An Explainable, Research-First Machine Learning Pipeline Using Earth Observation Data**
+# Crop Yield Prediction System
+
+End-to-end machine learning system for regional crop yield prediction across
+5 Indian states, combining satellite vegetation data (NDVI), climate variables,
+soil organic carbon, and historical yield records.
+
+**Model performance (held-out test set, 2021–2022)**
+
+| Metric | Value |
+|--------|-------|
+| R² | 0.9145 |
+| RMSE | 0.233 |
+| MAE | 0.173 |
+
+Conformal prediction intervals: ±0.317 (80%), ±0.523 (90%), ±0.622 (95%).
 
 ---
 
-## Repository Positioning (Important)
+## Architecture
 
-This repository is a **research-grade machine learning project** focused on
-crop yield prediction using Earth observation data.
+```
+frontend/          React + Vite UI (Firebase auth, prediction form, dashboard)
+    │
+    │  POST /predict
+    ▼
+api.py             FastAPI inference service (project root)
+    │
+    ▼
+ml/src/            Core ML — feature engineering, inference, explainability
+models/            Trained artifacts (student_lightgbm, preprocessor, FE)
+```
 
-While the repository contains **API and dashboard components**, these are
-**reference implementations only**, included to demonstrate how the research
-outputs *can* be operationalized.
-
-> ⚠️ **This repository is NOT a commercial product.**  
-> Production deployment, scalability, security, and business logic are
-> intentionally out of scope.
-
-Future commercial systems should implement **independent APIs, dashboards,
-and infrastructure**.
-=======
-# 🌾 Agri Yield Intelligence Platform
-**Scenario-Based, Explainable Crop Yield Forecasting System**
->>>>>>> business
-
----
-
-## Overview
-
-<<<<<<< HEAD
-This project implements an **end-to-end, production-oriented research pipeline**
-for **regional crop yield prediction** using:
-
-- Satellite-derived vegetation indices (NDVI)
-- Climate variables (temperature, rainfall, humidity, wind)
-- Soil Organic Carbon (SOC)
-- Historical yield observations
-
-Unlike notebook-only experiments, the system is designed around the **full
-machine learning lifecycle**, with emphasis on:
-
-- reproducibility,
-- strict feature parity between training and inference,
-- explainability,
-- and operational feasibility.
-
-The project follows **Earth observation ML best practices**, prioritizing
-**scientific validity and interpretability** over speculative forecasting.
+**Model design**
+- Teacher: Stacking Regressor (RandomForest + GradientBoosting + Lasso + ElasticNet → LinearRegression meta)
+- Student: LightGBM (distilled from teacher, deployed artifact)
+- Training split: 2011–2018 train / 2019–2020 val / 2021–2022 test (temporal, no shuffle)
 
 ---
 
-## Research Questions
+## Repository Layout
 
-This research investigates:
-
-1. How effectively can seasonal NDVI and climate variables predict regional crop yield?
-2. Do NDVI–climate interaction features outperform climate-only baselines?
-3. How does soil organic carbon (SOC) influence vegetation–yield relationships?
-4. Can explainable ML methods (SHAP) produce agronomically meaningful insights?
-
----
-
-## Why This Project Matters
-
-Many crop-yield ML studies stop at:
-
-> *“The model trains.”*
-
-This project goes further:
-
-> *“The system predicts, explains, validates assumptions, and can be safely operationalized.”*
-
-It is designed as a **decision-support system**, not a black-box predictor,
-making it suitable for **agricultural analysis, research, and policy-facing work**.
-
----
-
-## Intended Use
-
-This system is intended for:
-
-- agricultural research,
-- extension and advisory analysis,
-- policy and planning studies,
-- climate–yield impact assessment.
-
-Given observed vegetation, climate, and soil conditions for a growing season,
-the system:
-
-- estimates expected crop yield,
-- identifies dominant environmental drivers,
-- supports post-season assessment and early risk analysis.
-
-The system **does not extrapolate beyond observed environmental data**, ensuring
-trustworthy and scientifically disciplined outputs.
-
----
-
-## Key Contributions
-
-### 1. Multi-Source Data Integration
-- NDVI (satellite vegetation health)
-- Climate variables
-- Soil Organic Carbon (SOC)
-- Historical yield records
-
-All sources are harmonized temporally and spatially.
+```
+Crop_Yield_System/
+├── api.py                        # FastAPI app — /health /metrics /predict /predict/batch
+├── requirements_api.txt          # Deps to run api.py
+├── requirements.txt              # Full ML pipeline deps
+├── conifgs/
+│   └── config.example.yaml       # Copy to config.yaml and fill in local paths
+│
+├── ml/
+│   ├── src/
+│   │   ├── feature_engineering.py   # Leakage-safe FE (fit on train only)
+│   │   ├── inference/
+│   │   │   └── predict.py           # run_prediction() — core inference function
+│   │   ├── explainer/               # SHAP explainability
+│   │   └── ...                      # ingest, merge, splitter, outlier, etc.
+│   ├── steps/                       # ZenML @step functions
+│   └── pipelines/
+│       └── training_pipeline.py     # Canonical training DAG
+│
+├── models/                          # Trained artifacts (committed)
+│   ├── student_lightgbm.joblib
+│   ├── preprocessor.joblib
+│   ├── feature_engineering.joblib
+│   └── conformal_quantiles.json
+│
+├── frontend/                        # React + Vite + Firebase
+│   └── src/
+│       ├── App.tsx
+│       └── services/predictionService.ts
+│
+├── scripts/
+│   └── run_pipeline.py              # Entry point: python scripts/run_pipeline.py
+│
+├── evaluation/
+│   ├── evaluation_report.json
+│   └── evaluation_predictions.csv
+│
+└── data/
+    ├── raw/                         # NASA POWER weather, NDVI, SOC, yield CSV
+    └── Processed/                   # Merged panel dataset
+```
 
 ---
 
-### 2. Domain-Aware Feature Engineering
+## Quickstart
 
-Feature engineering incorporates agronomic reasoning, including:
+### 1. Install API dependencies
 
-- NDVI–climate interaction features
-- NDVI–SOC hybrid indicators
-- Vegetation stress and anomaly metrics
-- Temporal lag features
-- Rolling window statistics
+```bash
+pip install -r requirements_api.txt
+```
 
-This improves interpretability and reduces overfitting.
+### 2. Start the inference API
 
----
+```bash
+uvicorn api:app --port 8000
+```
 
-### 3. Explainable Machine Learning (SHAP)
+Health check:
 
-Explainability is treated as a **first-class component**:
+```bash
+curl http://localhost:8000/health
+# {"status":"ok","artifacts":{"model":true,"encoder":true,"feature_engineering":true}}
+```
 
-- Feature-level contribution analysis
-- Case-based explanations for individual predictions
-- Identification of dominant environmental drivers
+### 3. Start the frontend
 
-This transparency is critical for agricultural and policy-facing systems.
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:3000
+```
 
----
+The frontend reads `VITE_API_URL` from `frontend/.env.local`:
 
-### 4. Production-Oriented Research Design
-
-The system follows production ML principles without being a deployed product:
-
-- Modular pipeline design
-- Configuration-driven execution
-- Clear separation of ingestion, features, modeling, inference, and explanation
-- Schema validation at inference boundaries
-- Lazy loading of heavy components (models, explainers)
-
----
-
-## Prediction Scope and Temporal Constraints
-
-Predictions are restricted to years with **observed NDVI and climate data**.
-
-- NDVI observations: **2011–2022**
-- Climate variables aligned to the same period
-
-This constraint is intentional:
-
-- Tree-based models do not extrapolate reliably without future covariates
-- Prevents silent feature drift and misleading predictions
-
-Future-year predictions require either:
-- projected climate inputs, or
-- scenario-based NDVI estimates.
+```
+VITE_API_URL=http://localhost:8000
+```
 
 ---
 
-## Evaluation Methodology
+## API
 
-Models are evaluated using:
-
-- Root Mean Squared Error (RMSE)
-- Mean Absolute Error (MAE)
-- R² score
-
-Temporal splits are used to prevent data leakage.
-Baseline comparisons include climate-only and NDVI-only models, with ablation
-studies assessing the contribution of engineered features.
-
----
-
-## Repository Structure
-
-The repository separates **research artifacts** from **reference system components**.
-
-### Research Components
-- `notebook/` — Research notebooks and experiments
-- `evaluation/` — Model evaluation and metrics
-- `steps/` — Modular, research-oriented pipeline steps
-- `pipelines/` — Reproducible research pipelines
-
-### Core ML Logic
-- `src/` — Feature engineering, NDVI processing, explainability
-- `data/` — Sample and processed datasets (no proprietary raw data)
-- `models/` — Research model artifacts (not production models)
-
-### Reference Implementations
-- `api/` — Reference FastAPI inference service
-- `dashboard/` — Demonstration dashboard for visualization
-
-> The `api/` and `dashboard/` directories are **illustrative only** and are not
-> intended for real-world production deployment.
-
----
-
-## API Reference Example (Illustrative Only)
-
-The following example demonstrates the **inference contract and output schema**.
-
-**POST** `/predict?explain=false`
+### `POST /predict`
 
 ```json
 {
-  "state": "Punjab",
-  "district": "Ludhiana",
-  "crop": "Wheat",
+  "state":       "PUNJAB",
+  "year":        2022,
+  "season":      "Rabi",
+  "T2M":         18.5,
+  "T2M_MAX":     26.0,
+  "T2M_MIN":     10.0,
+  "PRECTOTCORR": 95.0,
+  "RH2M":        62.0,
+  "WS2M":        2.1,
+  "ALLSKY_SFC_SW_DWN": 14.3
+}
+```
+
+All climate fields are optional — missing values are filled from training-set
+group means by the fitted `FeatureEngineering` object.
+
+**Response**
+
+```json
+{
+  "state": "PUNJAB",
+  "year": 2022,
   "season": "Rabi",
-  "year": 2021
+  "predicted_yield": 4.9991,
+  "intervals": [
+    {"coverage": 0.80, "lower": 4.68, "upper": 5.32, "half_width": 0.3166},
+    {"coverage": 0.90, "lower": 4.48, "upper": 5.52, "half_width": 0.5232},
+    {"coverage": 0.95, "lower": 4.38, "upper": 5.62, "half_width": 0.6224}
+  ],
+  "risk_level": "Medium",
+  "model": "student_lightgbm"
 }
+```
 
-{
-  "predicted_yield": 3.66
-}
+### `POST /predict/batch`
 
-{
-  "predicted_yield": 3.66,
-  "explanation": {
-    "NDVI_SeasonalMean": 0.45,
-    "Rain_anomaly": -0.12,
-    "Mean_SOC_NDVI_Hybrid": 0.08
-  }
-}
+Same schema as `/predict`, body is a JSON array (max 50 rows).
 
-=======
-The **Agri Yield Intelligence Platform** is an **explainable decision-support system**
-for estimating regional crop yield under observed or scenario-based environmental
-conditions.
+### `GET /health`
 
-The system combines:
-- satellite-derived vegetation indicators,
-- climate variables,
-- soil quality information,
-- and historical yield patterns
+Returns artifact availability.
 
-to produce **transparent, interpretable yield estimates** suitable for
-agricultural planning and risk assessment.
+### `GET /metrics`
 
-This repository represents a **business-oriented prototype** derived from a
-research pipeline, demonstrating how explainable machine learning can support
-real-world agricultural decisions.
+Returns the latest `evaluation/evaluation_report.json`.
 
 ---
 
-## What This System Does
+## Training Pipeline
 
-The platform allows users to:
-
-- estimate expected crop yield for a region,
-- explore how yield responds to environmental changes,
-- understand *why* the model produces a prediction,
-- compare baseline and stress scenarios,
-- support planning under climate variability.
-
-The system is designed for **post-season assessment, early-season monitoring,
-and scenario exploration**, not speculative long-term forecasting.
-
----
-
-## Key Capabilities
-
-### 🌱 Scenario-Based Forecasting
-Users can adjust:
-- temperature,
-- rainfall,
-- solar radiation,
-- vegetation indices,
-- soil organic carbon
-
-to evaluate **“what-if” yield outcomes** under different environmental conditions.
-
----
-
-### 🔍 Explainable Predictions
-Explainability is built into the core workflow:
-
-- Feature-level contribution analysis (SHAP)
-- Identification of dominant yield drivers
-- Transparent, auditable predictions
-
-This enables trust, debugging, and stakeholder communication.
-
----
-
-### 📊 Interactive Dashboard
-A Streamlit dashboard provides:
-
-- intuitive input controls,
-- real-time predictions,
-- uncertainty awareness,
-- side-by-side scenario comparison.
-
----
-
-### ⚙️ API-First Architecture
-A FastAPI service exposes the inference logic, enabling:
-- integration with other systems,
-- future automation,
-- decoupled frontend development.
-
----
-
-## System Architecture
-
-User / Analyst
-│
-▼
-Streamlit Dashboard
-│
-▼
-FastAPI Inference Service
-│
-▼
-Trained ML Model + Explainability Engine
----
-
-## Running the System Locally
-
-### 1️⃣ Install dependencies
+Requires `config.yaml` (copy from `conifgs/config.example.yaml` and set local
+paths to raw data).
 
 ```bash
 pip install -r requirements.txt
+python scripts/run_pipeline.py
+```
 
-2️⃣ Start the API
-uvicorn api.main:app --reload
+Pipeline order (leakage-safe):
 
-3️⃣ Launch the Dashboard
-streamlit run dashboard_business/dashboard.py
+1. **Ingest** — NASA POWER weather, NDVI, SOC, yield CSV
+2. **Merge** — join all sources into a single panel
+3. **Split** — temporal split by year (no shuffle)
+4. **Missing values** — fit on train, transform all splits
+5. **Outliers** — IQR-groupwise, fit on train only
+6. **Feature engineering** — fit on train, `lag_history`-aware transform for val/test
+7. **Train** — teacher stacking → student LightGBM distillation
+8. **Evaluate** — RMSE / R² / MAE + conformal intervals on test set
 
-Example API Request (Illustrative)
+---
 
-POST /predict?explain=true
+## Supported States
 
-{
-  "climate": {
-    "avg_temperature": 26,
-    "max_temperature": 35,
-    "min_temperature": 20,
-    "total_rainfall": 600,
-    "solar_radiation": 20,
-    "relative_humidity": 65,
-    "wind_speed": 2.5
-  },
-  "soil": {
-    "soil_organic_carbon": 0.7
-  },
-  "vegetation": {
-    "ndvi_early": 0.6
-  }
-}
-Example Response
-{
-  "prediction": {
-    "expected_yield": 3.37,
-    "yield_lower": 3.04,
-    "yield_upper": 3.71,
-    "risk_level": "Low",
-    "confidence": "High"
-  },
-  "explanation": {
-    "soil_organic_carbon": 0.61,
-    "wind_speed": -0.20,
-    "total_rainfall": -0.08
-  }
-}
->>>>>>> business
+| State | Season |
+|-------|--------|
+| Punjab | Rabi, Kharif |
+| Haryana | Rabi, Kharif |
+| Rajasthan | Rabi, Kharif |
+| Uttar Pradesh | Rabi, Kharif |
+| Chandigarh | Reference only — insufficient test rows |
+
+Data range: **2011–2022** (~180 panel rows). Metric variance is high at this
+sample size; interpret R² with caution.
+
+---
+
+## Feature Engineering Highlights
+
+- NDVI × climate interaction terms (NDVI_Rain, NDVI_Temp, NDVI_Rain_Hybrid)
+- NDVI and Rain anomalies relative to group (State × Season) medians
+- SOC × NDVI hybrid and stress indicators
+- Season one-hot encoding (Kharif / Rabi / Zaid)
+- Temporal lag features: Yield_Lag1/2, NDVI_Lag1/2, Rain_Lag1/2
+- Rolling statistics (3-year window) for yield, NDVI, rainfall
+- Compound stress flag (NDVI and Rain both below group median)
+
+All statistics used in feature engineering (group medians, SOC max, rain max)
+are fitted on the training split only and serialised to
+`models/feature_engineering.joblib`.
+
+---
+
+## Citation
+
+See `CITATION.cff`.
