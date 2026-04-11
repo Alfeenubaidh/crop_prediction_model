@@ -1,7 +1,37 @@
 cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
 title: "Explainable Crop Yield Prediction Using Earth Observation Data"
+
 authors:
   - family-names: Alfeen
     given-names: Ubaidh
+
 version: 1.0.0
 date-released: 2026-01-07
+license: Apache-2.0
+url: "https://github.com/Alfeenubaidh/crop_prediction_model"
+repository-code: "https://github.com/Alfeenubaidh/crop_prediction_model"
+
+abstract: >
+  End-to-end machine learning system for regional crop yield prediction
+  across 5 Indian states (Punjab, Haryana, Rajasthan, Uttar Pradesh,
+  Chandigarh) using satellite-derived NDVI, NASA POWER climate variables,
+  soil organic carbon, and historical yield records (2011-2022).
+  The system employs a teacher-student distillation architecture
+  (Stacking Regressor to LightGBM) with leakage-safe temporal feature
+  engineering, conformal prediction intervals, and SHAP-based
+  explainability. Served via a FastAPI inference layer and a React
+  frontend with Firebase authentication.
+
+keywords:
+  - crop yield prediction
+  - machine learning
+  - remote sensing
+  - NDVI
+  - LightGBM
+  - knowledge distillation
+  - SHAP explainability
+  - conformal prediction
+  - India agriculture
+  - Earth observation
