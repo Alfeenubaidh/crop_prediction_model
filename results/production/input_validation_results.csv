@@ -1,0 +1,11 @@
+test_name,payload_summary,expected_status,actual_status,passed,note
+valid_baseline,"state, year, season, T2M, PRECTOTCORR, RH2M",200,200,True,
+missing_state,"year, season, T2M",422,422,True,
+missing_year,"state, season",422,422,True,
+missing_season,"state, year",422,422,True,
+unsupported_state_chandigarh,"state, year, season",422,422,True,
+invalid_year_type,"state, year, season",422,422,True,
+empty_payload,,422,422,True,
+extreme_temperature,"state, year, season, T2M, T2M_MAX, PRECTOTCORR",200,200,True,
+zero_rainfall,"state, year, season, T2M, PRECTOTCORR",200,200,True,
+all_optional_fields_omitted,"state, year, season",200,200,True,

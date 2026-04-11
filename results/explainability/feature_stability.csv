@@ -1,0 +1,4 @@
+run_pair,spearman_rank_correlation,p_value,stable
+run1_vs_run2,1.0,0.0,True
+run1_vs_run3,1.0,0.0,True
+run2_vs_run3,1.0,0.0,True

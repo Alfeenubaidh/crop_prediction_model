@@ -1,0 +1,4 @@
+variable,perturbation_type,max_absolute_change_pct,yield_range,monotonic_increasing,monotonic_decreasing,response_stable
+PRECTOTCORR,multiplier,1.4717,0.0626,False,True,True
+T2M,additive_celsius,0.9526,0.0428,False,False,True
+NDVI_anomaly,additive,0.0,0.0,True,True,True
