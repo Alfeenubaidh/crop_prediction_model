@@ -66,3 +66,5 @@ analysis/
 # Local runtime config
 # =========================================================
 config.yaml
+conifgs/config.yaml
+frontend/.env.local

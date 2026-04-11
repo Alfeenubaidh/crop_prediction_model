@@ -1,13 +1,10 @@
 # run_pipeline.py
-
-from src.utils.config_loader import load_config
-from pipelines.training_pipeline import training_pipeline
+from ml.src.utils.config_loader import load_config
+from ml.pipelines.training_pipeline import training_pipeline
 
 
 def main():
-    config = load_config("config.yaml")
-
-    # ZenML pipelines execute on call
+    config = load_config("conifgs/config.yaml")
     training_pipeline(config=config)
 
 
