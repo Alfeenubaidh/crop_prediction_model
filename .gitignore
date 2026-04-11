@@ -1,8 +1,6 @@
 # =========================================================
-# Python environments / IDE extensions
+# Python environments
 # =========================================================
-.jpy_ext/
-.jyp_env/
 .venv/
 venv/
 env/
@@ -10,7 +8,7 @@ conda/
 conda-meta/
 
 # =========================================================
-# Python bytecode / caches
+# Python cache
 # =========================================================
 __pycache__/
 *.pyc
@@ -28,26 +26,20 @@ __pycache__/
 .ipynb_checkpoints/
 
 # =========================================================
-# Data (controlled tracking)
+# Data
 # =========================================================
 data/raw/
 data/interim/
-data/Processed/**
+data/Processed/
 
-# Allow only final processed outputs
-!data/Processed/
-!data/Processed/versions/
-!data/Processed/versions/features_engineered_v12.csv
-!data/Processed/versions/merged_output.csv
+# (optional: allow specific small files only)
+# !data/Processed/sample.csv
 
 # =========================================================
-# Models (ignore binaries / trained artifacts)
+# Models & outputs (CRITICAL)
 # =========================================================
-models/*.joblib
-models/*.pkl
-models/*.bin
-models/*.h5
-models/*.onnx
+models/
+evaluation/
 
 # =========================================================
 # OS / Editor
@@ -58,30 +50,25 @@ Thumbs.db
 .zen/
 
 # =========================================================
-# Analysis (local only)
+# Local analysis
 # =========================================================
 analysis/
 
 # =========================================================
-# Local runtime config
+# Config (local only)
 # =========================================================
 config.yaml
 conifgs/config.yaml
 frontend/.env.local
 
 # =========================================================
-# Claude Code local settings
+# Claude / Cursor
 # =========================================================
 .claude/
 
 # =========================================================
-# Firebase Studio scaffolding (not needed in public repo)
+# Firebase (optional)
 # =========================================================
 frontend/firebase-applet-config.json
 frontend/firebase-blueprint.json
 frontend/metadata.json
-
-# =========================================================
-# Trained model binaries (regenerate via training pipeline)
-# =========================================================
-models/*.joblib
