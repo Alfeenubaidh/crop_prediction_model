@@ -1,5 +1,0 @@
-{
-  "name": "AgroPredict: Smart Crop Recommendation System",
-  "description": "A modern, full-stack agricultural platform that uses AI to predict the best crops based on soil and environmental parameters, featuring user dashboards and admin analytics.",
-  "requestFramePermissions": []
-}

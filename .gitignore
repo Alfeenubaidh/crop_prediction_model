@@ -68,3 +68,20 @@ analysis/
 config.yaml
 conifgs/config.yaml
 frontend/.env.local
+
+# =========================================================
+# Claude Code local settings
+# =========================================================
+.claude/
+
+# =========================================================
+# Firebase Studio scaffolding (not needed in public repo)
+# =========================================================
+frontend/firebase-applet-config.json
+frontend/firebase-blueprint.json
+frontend/metadata.json
+
+# =========================================================
+# Trained model binaries (regenerate via training pipeline)
+# =========================================================
+models/*.joblib
