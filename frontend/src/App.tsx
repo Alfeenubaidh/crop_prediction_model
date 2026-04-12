@@ -21,6 +21,7 @@ import {
   orderBy, 
   onSnapshot,
   addDoc,
+  increment,
   serverTimestamp,
   getDocs,
   limit
@@ -38,6 +39,8 @@ import {
   Droplets,
   Thermometer,
   CloudRain,
+  Sun,
+  Wind,
   FlaskConical,
   ShieldCheck,
   BarChart3,
@@ -235,6 +238,10 @@ const PredictionForm = ({ onSubmit, loading }: { onSubmit: (data: PredictionInpu
     temperature: 25,
     humidity: 60,
     rainfall: 100,
+    tempMax: 35,
+    tempMin: 15,
+    solarRad: 20,
+    windSpeed: 2,
     soilType: 'Loamy',
     ph: 6.5,
     nitrogen: 40,
@@ -328,8 +335,48 @@ const PredictionForm = ({ onSubmit, loading }: { onSubmit: (data: PredictionInpu
               <CloudRain className="w-4 h-4 text-emerald-600" />
               Rainfall (mm)
             </label>
-            <input 
+            <input
               type="number" name="rainfall" value={formData.rainfall} onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-50 focus:border-emerald-500 focus:outline-none transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+              <Thermometer className="w-4 h-4 text-red-500" />
+              Max Temperature (°C)
+            </label>
+            <input
+              type="number" name="tempMax" value={formData.tempMax} onChange={handleChange} step="0.1"
+              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-50 focus:border-emerald-500 focus:outline-none transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+              <Thermometer className="w-4 h-4 text-blue-500" />
+              Min Temperature (°C)
+            </label>
+            <input
+              type="number" name="tempMin" value={formData.tempMin} onChange={handleChange} step="0.1"
+              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-50 focus:border-emerald-500 focus:outline-none transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+              <Sun className="w-4 h-4 text-emerald-600" />
+              Solar Radiation (MJ/m²/day)
+            </label>
+            <input
+              type="number" name="solarRad" value={formData.solarRad} onChange={handleChange} step="0.1"
+              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-50 focus:border-emerald-500 focus:outline-none transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+              <Wind className="w-4 h-4 text-emerald-600" />
+              Wind Speed (m/s)
+            </label>
+            <input
+              type="number" name="windSpeed" value={formData.windSpeed} onChange={handleChange} step="0.1"
               className="w-full px-4 py-3 rounded-xl border-2 border-emerald-50 focus:border-emerald-500 focus:outline-none transition-colors"
             />
           </div>
@@ -679,21 +726,11 @@ export default function App() {
         result
       });
 
-      // Update global stats (simplified)
-      const statsRef = doc(db, 'system_stats', 'usage');
-      const statsDoc = await getDoc(statsRef);
-      if (statsDoc.exists()) {
-        await setDoc(statsRef, {
-          totalPredictions: (statsDoc.data().totalPredictions || 0) + 1,
-          lastPredictionAt: serverTimestamp()
-        }, { merge: true });
-      } else {
-        await setDoc(statsRef, {
-          totalPredictions: 1,
-          lastPredictionAt: serverTimestamp(),
-          activeUsers: 1
-        });
-      }
+      // Update global stats
+      await setDoc(doc(db, 'system_stats', 'usage'), {
+        totalPredictions: increment(1),
+        lastPredictionAt: serverTimestamp()
+      }, { merge: true });
 
     } catch (error) {
       console.error("Prediction failed", error);

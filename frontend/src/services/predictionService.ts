@@ -20,6 +20,10 @@ export interface PredictionInputs {
   potassium:    number;
   yieldLag1?:   number;
   yieldLag2?:   number;
+  tempMax:      number;  // T2M_MAX
+  tempMin:      number;  // T2M_MIN
+  solarRad:     number;  // ALLSKY_SFC_SW_DWN
+  windSpeed:    number;  // WS2M
 }
 
 export interface ConformalInterval {
@@ -48,8 +52,12 @@ function buildRequest(inputs: PredictionInputs): Record<string, unknown> {
   if (inputs.temperature !== undefined) req.T2M         = inputs.temperature;
   if (inputs.humidity    !== undefined) req.RH2M        = inputs.humidity;
   if (inputs.rainfall    !== undefined) req.PRECTOTCORR = inputs.rainfall;
-  if (inputs.yieldLag1   !== undefined) req.yield_lag1  = inputs.yieldLag1;
-  if (inputs.yieldLag2   !== undefined) req.yield_lag2  = inputs.yieldLag2;
+  if (inputs.yieldLag1   !== undefined) req.yield_lag1        = inputs.yieldLag1;
+  if (inputs.yieldLag2   !== undefined) req.yield_lag2        = inputs.yieldLag2;
+  if (inputs.tempMax     !== undefined) req.T2M_MAX           = inputs.tempMax;
+  if (inputs.tempMin     !== undefined) req.T2M_MIN           = inputs.tempMin;
+  if (inputs.solarRad    !== undefined) req.ALLSKY_SFC_SW_DWN = inputs.solarRad;
+  if (inputs.windSpeed   !== undefined) req.WS2M              = inputs.windSpeed;
   return req;
 }
 
