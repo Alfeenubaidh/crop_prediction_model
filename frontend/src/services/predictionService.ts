@@ -1,29 +1,48 @@
 /**
  * predictionService.ts
+ * --------------------
+ * Connects the AgroPredict frontend to the FastAPI backend.
+ *
+ * The form currently collects: temperature, humidity, rainfall,
+ * soilType, ph, nitrogen, phosphorus, potassium.
+ *
+ * The backend expects: state, year, season + optional climate fields.
+ *
+ * This service maps the form inputs to the API schema and maps the
+ * API response back to the shape the existing UI expects
+ * (crop, confidence, advice).
  */
 
+// ── config ────────────────────────────────────────────────────────────────────
+// Set VITE_API_URL in your .env.local file.
+// Example: VITE_API_URL=http://localhost:8000
+// Falls back to localhost:8000 in development.
 const API_BASE =
   (import.meta as any).env?.VITE_API_URL?.replace(/\/$/, "") ??
   "http://localhost:8000";
 
+// ── types (what the form uses — keep these unchanged) ─────────────────────────
 export interface PredictionInputs {
-  state:        string;
-  year:         number;
-  season:       string;
-  temperature:  number;
-  humidity:     number;
-  rainfall:     number;
-  soilType:     string;
-  ph:           number;
-  nitrogen:     number;
-  phosphorus:   number;
-  potassium:    number;
-  yieldLag1?:   number;
-  yieldLag2?:   number;
-  tempMax:      number;  // T2M_MAX
-  tempMin:      number;  // T2M_MIN
-  solarRad:     number;  // ALLSKY_SFC_SW_DWN
-  windSpeed:    number;  // WS2M
+  // Location & time — new required fields added to the form
+  state:   string;
+  year:    number;
+  season:  string;
+
+  // Climate — optional, sent to API when provided
+  temperature:  number;   // maps to T2M
+  humidity:     number;   // maps to RH2M
+  rainfall:     number;   // maps to PRECTOTCORR
+
+  // Kept for form compatibility — not sent to model
+  soilType:   string;
+  ph:         number;
+  nitrogen:   number;
+  phosphorus: number;
+  potassium:  number;
+
+  // Optional prior yields for lag features
+  yieldLag1?: number;
+  yieldLag2?: number;
 }
 
 export interface ConformalInterval {
@@ -34,31 +53,42 @@ export interface ConformalInterval {
 }
 
 export interface PredictionResult {
-  crop:            string;
-  confidence:      number;
-  advice:          string;
+  // Shape the existing UI expects
+  crop:       string;   // "X.XX t/ha" — yield formatted as a string
+  confidence: number;   // mapped from R² (0.9145 → 0.9145)
+  advice:     string;   // human-readable interpretation
+
+  // Extended fields (available for future UI improvements)
   predicted_yield: number;
   unit:            string;
   intervals:       ConformalInterval[];
   latency_ms:      number | null;
 }
 
+// ── request builder ───────────────────────────────────────────────────────────
 function buildRequest(inputs: PredictionInputs): Record<string, unknown> {
   const req: Record<string, unknown> = {
     state:  inputs.state.trim().toUpperCase(),
     year:   inputs.year,
     season: inputs.season,
   };
+
+  // Climate fields — only include if the user provided them
   if (inputs.temperature !== undefined) req.T2M         = inputs.temperature;
   if (inputs.humidity    !== undefined) req.RH2M        = inputs.humidity;
   if (inputs.rainfall    !== undefined) req.PRECTOTCORR = inputs.rainfall;
-  if (inputs.yieldLag1   !== undefined) req.yield_lag1        = inputs.yieldLag1;
-  if (inputs.yieldLag2   !== undefined) req.yield_lag2        = inputs.yieldLag2;
-  if (inputs.tempMax     !== undefined) req.T2M_MAX           = inputs.tempMax;
-  if (inputs.tempMin     !== undefined) req.T2M_MIN           = inputs.tempMin;
-  if (inputs.solarRad    !== undefined) req.ALLSKY_SFC_SW_DWN = inputs.solarRad;
-  if (inputs.windSpeed   !== undefined) req.WS2M              = inputs.windSpeed;
+  if (inputs.yieldLag1   !== undefined) req.yield_lag1  = inputs.yieldLag1;
+  if (inputs.yieldLag2   !== undefined) req.yield_lag2  = inputs.yieldLag2;
+
   return req;
+}
+
+// ── response interpreter ──────────────────────────────────────────────────────
+function interpretYield(yieldTha: number): string {
+  if (yieldTha < 1.5) return "Low — consider soil improvement";
+  if (yieldTha < 3.0) return "Moderate — typical for rain-fed conditions";
+  if (yieldTha < 4.5) return "Good — well-managed crop expected";
+  return "Excellent — optimal growing conditions";
 }
 
 function buildAdvice(
@@ -67,49 +97,60 @@ function buildAdvice(
   season: string,
   interval80: ConformalInterval | undefined
 ): string {
-  let label = "Low — consider soil improvement";
-  if (yieldTha >= 1.5) label = "Moderate — typical for rain-fed conditions";
-  if (yieldTha >= 3.0) label = "Good — well-managed crop expected";
-  if (yieldTha >= 4.5) label = "Excellent — optimal growing conditions";
+  const label = interpretYield(yieldTha);
   const range = interval80
     ? ` Expected range: ${interval80.lower.toFixed(2)}–${interval80.upper.toFixed(2)} t/ha (80% confidence).`
     : "";
-  return `${label}. Predicted yield for ${state} ${season}: ${yieldTha.toFixed(2)} t/ha.${range} Model R² = 0.9145.`;
+  return (
+    `${label}. Predicted yield for ${state} ${season}: ${yieldTha.toFixed(2)} t/ha.` +
+    range +
+    ` Model R² = 0.9145 on held-out test set.`
+  );
 }
 
+// ── main export ───────────────────────────────────────────────────────────────
 export async function predictCrop(
   inputs: PredictionInputs
 ): Promise<PredictionResult> {
-  const body = buildRequest(inputs);
+  const requestBody = buildRequest(inputs);
 
   let response: Response;
   try {
     response = await fetch(`${API_BASE}/predict`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(body),
+      body:    JSON.stringify(requestBody),
     });
-  } catch {
+  } catch (networkError) {
     throw new Error(
-      `Cannot reach API at ${API_BASE}. Make sure uvicorn is running.`
+      `Cannot reach the prediction API at ${API_BASE}. ` +
+      "Make sure the backend is running: uvicorn api:app --port 8000"
     );
   }
 
   if (!response.ok) {
     let detail = `API error ${response.status}`;
-    try { const err = await response.json(); detail = err?.detail ?? detail; } catch {}
+    try {
+      const err = await response.json();
+      detail = err?.detail ?? detail;
+    } catch {}
     throw new Error(detail);
   }
 
   const data = await response.json();
-  const yieldTha: number = data.predicted_yield;
+
+  // Map API response → shape the existing UI expects
+  const yieldTha: number  = data.predicted_yield;
   const intervals: ConformalInterval[] = data.intervals ?? [];
   const interval80 = intervals.find((i) => i.coverage === 0.8);
 
   return {
-    crop:            `${yieldTha.toFixed(2)} t/ha`,
-    confidence:      0.9145,
-    advice:          buildAdvice(yieldTha, inputs.state, inputs.season, interval80),
+    // Fields the existing ResultDisplay component uses
+    crop:       `${yieldTha.toFixed(2)} t/ha`,
+    confidence: 0.9145,                          // model-level R²
+    advice:     buildAdvice(yieldTha, inputs.state, inputs.season, interval80),
+
+    // Extended fields
     predicted_yield: yieldTha,
     unit:            data.unit ?? "t/ha",
     intervals,

@@ -23,11 +23,11 @@ frontend/          React + Vite UI (Firebase auth, prediction form, dashboard)
     │
     │  POST /predict
     ▼
-api.py             FastAPI inference service (project root)
+backend/api.py     FastAPI inference service
     │
     ▼
-ml/src/            Core ML — feature engineering, inference, explainability
-models/            Trained artifacts (student_lightgbm, preprocessor, FE)
+backend/ml/src/    Core ML — feature engineering, inference, explainability
+backend/models/    Trained artifacts (student_lightgbm, preprocessor, FE)
 ```
 
 **Model design**
@@ -41,44 +41,49 @@ models/            Trained artifacts (student_lightgbm, preprocessor, FE)
 
 ```
 Crop_Yield_System/
-├── api.py                        # FastAPI app — /health /metrics /predict /predict/batch
-├── requirements_api.txt          # Deps to run api.py
-├── requirements.txt              # Full ML pipeline deps
-├── conifgs/
-│   └── config.example.yaml       # Copy to config.yaml and fill in local paths
+├── Procfile                         # Deployment entry point (uvicorn backend.api:app)
+├── render.yaml                      # Render.com service config
+├── build.sh                         # Artifact fetch script (downloads models.zip from S3)
 │
-├── ml/
-│   ├── src/
-│   │   ├── feature_engineering.py   # Leakage-safe FE (fit on train only)
-│   │   ├── inference/
-│   │   │   └── predict.py           # run_prediction() — core inference function
-│   │   ├── explainer/               # SHAP explainability
-│   │   └── ...                      # ingest, merge, splitter, outlier, etc.
-│   ├── steps/                       # ZenML @step functions
-│   └── pipelines/
-│       └── training_pipeline.py     # Canonical training DAG
+├── backend/                         # All server-side code and artifacts
+│   ├── api.py                       # FastAPI app — /health /metrics /predict /predict/batch
+│   ├── requirements_api.txt         # Deps to run api.py
+│   ├── requirements.txt             # Full ML pipeline deps
+│   ├── conifgs/
+│   │   └── config.example.yaml      # Copy to config.yaml and fill in local paths
+│   │
+│   ├── ml/
+│   │   ├── src/
+│   │   │   ├── feature_engineering.py   # Leakage-safe FE (fit on train only)
+│   │   │   ├── inference/
+│   │   │   │   └── predict.py           # run_prediction() — core inference function
+│   │   │   ├── explainer/               # SHAP explainability
+│   │   │   └── ...                      # ingest, merge, splitter, outlier, etc.
+│   │   ├── steps/                       # ZenML @step functions
+│   │   └── pipelines/
+│   │       └── training_pipeline.py     # Canonical training DAG
+│   │
+│   ├── models/                          # Trained artifacts
+│   │   ├── student_lightgbm.joblib
+│   │   ├── preprocessor.joblib
+│   │   ├── feature_engineering.joblib
+│   │   └── conformal_quantiles.json
+│   │
+│   ├── scripts/
+│   │   └── run_pipeline.py              # Entry point: python backend/scripts/run_pipeline.py
+│   │
+│   ├── evaluation/
+│   │   ├── evaluation_report.json
+│   │   └── evaluation_predictions.csv
+│   │
+│   └── data/
+│       ├── raw/                         # NASA POWER weather, NDVI, SOC, yield CSV
+│       └── Processed/                   # Merged panel dataset
 │
-├── models/                          # Trained artifacts (committed)
-│   ├── student_lightgbm.joblib
-│   ├── preprocessor.joblib
-│   ├── feature_engineering.joblib
-│   └── conformal_quantiles.json
-│
-├── frontend/                        # React + Vite + Firebase
-│   └── src/
-│       ├── App.tsx
-│       └── services/predictionService.ts
-│
-├── scripts/
-│   └── run_pipeline.py              # Entry point: python scripts/run_pipeline.py
-│
-├── evaluation/
-│   ├── evaluation_report.json
-│   └── evaluation_predictions.csv
-│
-└── data/
-    ├── raw/                         # NASA POWER weather, NDVI, SOC, yield CSV
-    └── Processed/                   # Merged panel dataset
+└── frontend/                        # React + Vite + Firebase
+    └── src/
+        ├── App.tsx
+        └── services/predictionService.ts
 ```
 
 ---
@@ -88,13 +93,13 @@ Crop_Yield_System/
 ### 1. Install API dependencies
 
 ```bash
-pip install -r requirements_api.txt
+pip install -r backend/requirements_api.txt
 ```
 
 ### 2. Start the inference API
 
 ```bash
-uvicorn api:app --port 8000
+uvicorn backend.api:app --port 8000
 ```
 
 Health check:
@@ -180,8 +185,8 @@ Requires `config.yaml` (copy from `conifgs/config.example.yaml` and set local
 paths to raw data).
 
 ```bash
-pip install -r requirements.txt
-python scripts/run_pipeline.py
+pip install -r backend/requirements.txt
+python backend/scripts/run_pipeline.py
 ```
 
 Pipeline order (leakage-safe):
