@@ -252,19 +252,19 @@ const Home = ({ onStart }: { onStart: () => void }) => {
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              icon: <CloudRain className="w-7 h-7" />,
-              title: 'Input Environmental Data',
-              desc: 'Provide weather parameters — temperature, rainfall, humidity, solar radiation — alongside your soil profile.',
+              icon: <Activity className="w-7 h-7" />,
+              title: 'AI-Powered Predictions',
+              desc: 'A LightGBM model distilled from a Stacking Regressor, trained on satellite NDVI, NASA POWER climate data, and soil carbon across five Indian states.',
             },
             {
-              icon: <BarChart3 className="w-7 h-7" />,
-              title: 'ML Model Analysis',
-              desc: 'A distilled LightGBM model trained on historical data from five Indian states analyses your inputs in milliseconds.',
+              icon: <ShieldCheck className="w-7 h-7" />,
+              title: 'Confidence Intervals',
+              desc: 'Every prediction ships with conformal prediction intervals at 80 %, 90 %, and 95 % coverage so you know exactly how much uncertainty to plan for.',
             },
             {
-              icon: <Sprout className="w-7 h-7" />,
-              title: 'Get Yield Prediction',
-              desc: 'Receive an estimated crop yield with confidence context so you can plan sowing, irrigation, and harvest windows.',
+              icon: <History className="w-7 h-7" />,
+              title: 'Historical Tracking',
+              desc: 'All predictions are saved to your account. Review past forecasts, spot trends over seasons, and compare year-on-year yield estimates in your dashboard.',
             },
           ].map(({ icon, title, desc }, i) => (
             <motion.div
@@ -296,6 +296,14 @@ const Home = ({ onStart }: { onStart: () => void }) => {
 };
 
 const PredictionForm = ({ onSubmit, loading }: { onSubmit: (data: PredictionInputs) => void, loading: boolean }) => {
+  const [slowLoading, setSlowLoading] = useState(false);
+
+  useEffect(() => {
+    if (!loading) { setSlowLoading(false); return; }
+    const timer = setTimeout(() => setSlowLoading(true), 3000);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   const [formData, setFormData] = useState<PredictionInputs>({
     state: 'PUNJAB',
     year: 2022,
@@ -498,8 +506,10 @@ const PredictionForm = ({ onSubmit, loading }: { onSubmit: (data: PredictionInpu
             >
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Analyzing Data...
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin flex-shrink-0" />
+                  {slowLoading
+                    ? 'Waking up the AI model, this may take 30 seconds...'
+                    : 'Analyzing Data...'}
                 </>
               ) : 'Generate Prediction'}
             </button>
