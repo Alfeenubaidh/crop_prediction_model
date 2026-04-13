@@ -170,65 +170,130 @@ const Navbar = ({ user, profile, onLogin, onLogout, activeTab, setActiveTab }: {
   </nav>
 );
 
-const Home = ({ onStart }: { onStart: () => void }) => (
-  <div className="pt-32 pb-20 px-6">
-    <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-      <motion.div 
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-6">
-          <Activity className="w-3 h-3" />
-          AI-Powered Agriculture
+const Home = ({ onStart }: { onStart: () => void }) => {
+  const scrollToFeatures = () =>
+    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+
+  return (
+    <div className="pt-32 pb-20 px-6">
+      <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-6">
+            <Activity className="w-3 h-3" />
+            AI-Powered Agriculture
+          </div>
+          <h1 className="text-6xl font-bold text-emerald-950 leading-[1.1] mb-6">
+            Predict Your <span className="text-emerald-600">Harvest</span> with Precision.
+          </h1>
+          <p className="text-lg text-emerald-900/70 mb-8 max-w-lg leading-relaxed">
+            Optimize your farming decisions using advanced machine learning. Input your soil and environmental data to get instant, data-driven crop recommendations.
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={onStart}
+              className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 flex items-center gap-2 group"
+            >
+              Start Prediction
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <button
+              onClick={scrollToFeatures}
+              className="bg-white text-emerald-900 border-2 border-emerald-100 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-emerald-50 transition-all"
+            >
+              Learn More
+            </button>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="relative"
+        >
+          <div className="aspect-square rounded-[3rem] overflow-hidden shadow-2xl">
+            <img
+              src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=80&w=1000"
+              alt="Agriculture"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-3xl shadow-xl border border-emerald-50 max-w-[200px]">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+                <Sprout className="w-5 h-5" />
+              </div>
+              <span className="font-bold text-emerald-900">98% Accuracy</span>
+            </div>
+            <p className="text-xs text-emerald-900/60">Trained on 50,000+ soil samples worldwide.</p>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Features section */}
+      <div id="features" className="max-w-7xl mx-auto mt-32">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-14"
+        >
+          <h2 className="text-4xl font-bold text-emerald-950 mb-4">How It Works</h2>
+          <p className="text-lg text-emerald-900/60 max-w-xl mx-auto">
+            A three-step ML pipeline that turns raw field data into actionable yield forecasts.
+          </p>
+        </motion.div>
+        <div className="grid md:grid-cols-3 gap-8">
+          {[
+            {
+              icon: <CloudRain className="w-7 h-7" />,
+              title: 'Input Environmental Data',
+              desc: 'Provide weather parameters — temperature, rainfall, humidity, solar radiation — alongside your soil profile.',
+            },
+            {
+              icon: <BarChart3 className="w-7 h-7" />,
+              title: 'ML Model Analysis',
+              desc: 'A distilled LightGBM model trained on historical data from five Indian states analyses your inputs in milliseconds.',
+            },
+            {
+              icon: <Sprout className="w-7 h-7" />,
+              title: 'Get Yield Prediction',
+              desc: 'Receive an estimated crop yield with confidence context so you can plan sowing, irrigation, and harvest windows.',
+            },
+          ].map(({ icon, title, desc }, i) => (
+            <motion.div
+              key={title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.15 }}
+              className="bg-white border border-emerald-100 rounded-3xl p-8 shadow-lg shadow-emerald-50 flex flex-col gap-4"
+            >
+              <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-600 w-fit">{icon}</div>
+              <h3 className="text-xl font-bold text-emerald-950">{title}</h3>
+              <p className="text-emerald-900/60 leading-relaxed">{desc}</p>
+            </motion.div>
+          ))}
         </div>
-        <h1 className="text-6xl font-bold text-emerald-950 leading-[1.1] mb-6">
-          Predict Your <span className="text-emerald-600">Harvest</span> with Precision.
-        </h1>
-        <p className="text-lg text-emerald-900/70 mb-8 max-w-lg leading-relaxed">
-          Optimize your farming decisions using advanced machine learning. Input your soil and environmental data to get instant, data-driven crop recommendations.
-        </p>
-        <div className="flex flex-wrap gap-4">
-          <button 
+        <div className="text-center mt-12">
+          <button
             onClick={onStart}
-            className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 flex items-center gap-2 group"
+            className="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 inline-flex items-center gap-2 group"
           >
-            Start Prediction
+            Try It Now
             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button className="bg-white text-emerald-900 border-2 border-emerald-100 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-emerald-50 transition-all">
-            Learn More
-          </button>
         </div>
-      </motion.div>
-      
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8, delay: 0.2 }}
-        className="relative"
-      >
-        <div className="aspect-square rounded-[3rem] overflow-hidden shadow-2xl">
-          <img 
-            src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=80&w=1000" 
-            alt="Agriculture" 
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-        <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-3xl shadow-xl border border-emerald-50 max-w-[200px]">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
-              <Sprout className="w-5 h-5" />
-            </div>
-            <span className="font-bold text-emerald-900">98% Accuracy</span>
-          </div>
-          <p className="text-xs text-emerald-900/60">Trained on 50,000+ soil samples worldwide.</p>
-        </div>
-      </motion.div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const PredictionForm = ({ onSubmit, loading }: { onSubmit: (data: PredictionInputs) => void, loading: boolean }) => {
   const [formData, setFormData] = useState<PredictionInputs>({
