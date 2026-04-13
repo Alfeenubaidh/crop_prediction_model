@@ -59,6 +59,7 @@ analysis/
 # =========================================================
 config.yaml
 conifgs/config.yaml
+!backend/config.yaml
 frontend/.env.local
 
 # =========================================================

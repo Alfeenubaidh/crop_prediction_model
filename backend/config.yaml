@@ -1,0 +1,106 @@
+# ============================================================
+# RUNTIME CONFIGURATION — backend/config.yaml
+# Committed so Render picks it up on deploy.
+# All paths are relative to the backend/ directory.
+# ============================================================
+
+paths:
+  project_root: "."
+
+  model_dir: "models"
+  teacher_model_name: "teacher_stacking.joblib"
+  student_model_name: "student_lightgbm.joblib"
+
+  deployment_model: "models/student_lightgbm.joblib"
+  conformal_quantiles_path: "models/conformal_quantiles.json"
+
+  evaluation_dir: "evaluation"
+  predictions_dir: "data/predictions"
+  predictions_filename: "predictions.csv"
+
+
+# ============================================================
+# FEATURE ENGINEERING
+# ============================================================
+
+feature_engineering:
+  agricultural:
+    high_yield_percentile: 90
+    fit_on_train_only: true
+
+  climate:
+    temp_stress_threshold: 35.0
+    temp_column: T2M
+
+  ndvi_features:
+    ndvi_column: NDVI_SeasonalMean
+    ndvi_bins: [-1.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    ndvi_labels:
+      - very_low
+      - low
+      - moderate
+      - high
+      - very_high
+
+  soil_features: {}
+
+  season_features:
+    season_map:
+      Kharif: 1
+      Rabi: 2
+      Zaid: 3
+
+  state_features:
+    region_map:
+      Punjab: North
+      Haryana: North
+      Rajasthan: West
+      Uttar Pradesh: North
+      Chandigarh: North
+
+    agro_zone_map:
+      Punjab: Indo-Gangetic
+      Haryana: Indo-Gangetic
+      Rajasthan: Arid
+      Uttar Pradesh: Indo-Gangetic
+      Chandigarh: Urban
+
+  interaction_features:
+    custom_interactions:
+      - name: NDVI_div_Rain
+        left: NDVI_SeasonalMean
+        right: PRECTOTCORR
+        op: div
+        epsilon: 1e-6
+
+
+# ============================================================
+# DATA SPLITTING (inference-only reference — not used at runtime)
+# ============================================================
+
+data_split:
+  method: temporal
+  train_years: [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018]
+  val_years: [2019, 2020]
+  test_years: [2021, 2022]
+  shuffle: false
+  random_seed: 42
+
+
+# ============================================================
+# EVALUATION
+# ============================================================
+
+evaluation:
+  metrics:
+    - rmse
+    - r2
+    - mae
+  breakdown_by:
+    - State
+    - Season
+    - State_Season
+  save_predictions: true
+  predictions_filename: evaluation_predictions.csv
+  save_report: true
+  report_filename: evaluation_report.json
