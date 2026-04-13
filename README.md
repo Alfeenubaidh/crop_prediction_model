@@ -1,39 +1,157 @@
-# Crop Yield Prediction System
+# AgroPredict — Crop Yield Prediction System
 
-End-to-end machine learning system for regional crop yield prediction across
-5 Indian states, combining satellite vegetation data (NDVI), climate variables,
-soil organic carbon, and historical yield records.
+> End-to-end machine learning system for regional crop yield prediction across 5 Indian states, combining satellite vegetation data (NDVI), NASA POWER climate variables, soil organic carbon, and historical yield records (2011–2022).
 
-**Model performance (held-out test set, 2021–2022)**
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel)](https://crop-prediction-model-seven.vercel.app)
+[![API](https://img.shields.io/badge/API-Render-46E3B7?logo=render)](https://crop-prediction-model.onrender.com/docs)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE)
 
-| Metric | Value |
-|--------|-------|
-| R² | 0.9145 |
-| RMSE | 0.233 |
-| MAE | 0.173 |
+---
 
-Conformal prediction intervals: ±0.317 (80%), ±0.523 (90%), ±0.622 (95%).
+## Live Demo
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://crop-prediction-model-seven.vercel.app |
+| REST API (Swagger UI) | https://crop-prediction-model.onrender.com/docs |
+| API Health | https://crop-prediction-model.onrender.com/health |
+
+---
+
+## Features
+
+- **Yield prediction** — single-row and batch (up to 50 rows) predictions with a single API call
+- **Conformal prediction intervals** — statistically valid uncertainty bounds at 80 %, 90 %, and 95 % coverage
+- **Risk classification** — automatic Low / Medium / High risk labelling based on interval width
+- **SHAP explainability** — feature-importance values for every prediction
+- **Leakage-safe pipeline** — all preprocessing (missing-value imputation, outlier handling, feature engineering) is fitted exclusively on the training split
+- **Temporal feature engineering** — lag and rolling-window features that respect split boundaries
+- **Knowledge distillation** — compact LightGBM student distilled from a Stacking Regressor teacher for fast inference
+- **Firebase authentication** — Google Sign-In; every prediction is persisted to Firestore per user
+- **Prediction history dashboard** — time-series charts of past predictions per authenticated user
+- **Admin panel** — aggregated platform metrics visible to admin role accounts
+
+---
+
+## Tech Stack
+
+### Frontend
+| Layer | Technology |
+|-------|-----------|
+| UI framework | React 19 + TypeScript |
+| Build tool | Vite 6 |
+| Styling | Tailwind CSS 4 |
+| Animations | Motion (Framer Motion) |
+| Charts | Recharts |
+| Auth & database | Firebase 12 (Google Auth + Firestore) |
+| Deployment | Vercel |
+
+### Backend
+| Layer | Technology |
+|-------|-----------|
+| API framework | FastAPI 0.95 + Uvicorn |
+| ML runtime | scikit-learn 1.1, LightGBM 3.3, XGBoost 1.6 |
+| Data | pandas 2.0, NumPy 1.24 |
+| Explainability | SHAP |
+| Uncertainty | Conformal prediction (custom) |
+| Config | PyYAML |
+| Deployment | Render (free tier) |
+
+### ML Pipeline
+| Component | Technology |
+|-----------|-----------|
+| Orchestration | ZenML |
+| Data sources | NASA POWER API, NDVI (satellite), SOC dataset |
+| Teacher model | Stacking Regressor (RandomForest + GradientBoosting + Lasso + ElasticNet → LinearRegression meta) |
+| Student model | LightGBM (deployed artifact) |
+| Training split | Temporal — 2011–2018 train / 2019–2020 val / 2021–2022 test |
 
 ---
 
 ## Architecture
 
 ```
-frontend/          React + Vite UI (Firebase auth, prediction form, dashboard)
-    │
-    │  POST /predict
-    ▼
-backend/api.py     FastAPI inference service
-    │
-    ▼
-backend/ml/src/    Core ML — feature engineering, inference, explainability
-backend/models/    Trained artifacts (student_lightgbm, preprocessor, FE)
+┌─────────────────────────────────────────────────────────────┐
+│                        User Browser                         │
+│         React + Vite  (Vercel — crop-prediction-model-      │
+│                         seven.vercel.app)                   │
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │  Home / Hero │  │ Predict Form │  │    Dashboard     │  │
+│  └──────────────┘  └──────┬───────┘  └──────────────────┘  │
+│                            │ POST /predict                   │
+└────────────────────────────┼────────────────────────────────┘
+                             │
+                    ┌────────▼────────┐
+                    │  FastAPI (Render)│
+                    │  backend/api.py  │
+                    │                 │
+                    │  /predict        │
+                    │  /predict/batch  │
+                    │  /health         │
+                    │  /metrics        │
+                    └────────┬────────┘
+                             │
+              ┌──────────────▼──────────────┐
+              │      ML Inference Layer      │
+              │  backend/ml/src/inference/   │
+              │                             │
+              │  FeatureEngineering.joblib   │
+              │  preprocessor.joblib         │
+              │  student_lightgbm.joblib     │
+              │  conformal_quantiles.json    │
+              └─────────────────────────────┘
+                             │
+              ┌──────────────▼──────────────┐
+              │      Firebase (Google)       │
+              │  Authentication (Google SSO) │
+              │  Firestore (prediction logs) │
+              └─────────────────────────────┘
 ```
 
-**Model design**
-- Teacher: Stacking Regressor (RandomForest + GradientBoosting + Lasso + ElasticNet → LinearRegression meta)
-- Student: LightGBM (distilled from teacher, deployed artifact)
-- Training split: 2011–2018 train / 2019–2020 val / 2021–2022 test (temporal, no shuffle)
+**Model design — teacher → student distillation**
+
+```
+Training data (2011–2018)
+        │
+        ▼
+ Stacking Regressor  ◄── Teacher (high accuracy, slow)
+  ├─ RandomForest
+  ├─ GradientBoosting
+  ├─ Lasso
+  └─ ElasticNet
+        │ soft labels
+        ▼
+   LightGBM          ◄── Student (deployed, fast)
+        │
+        ▼
+  Conformal wrapper  ◄── Calibrated on val set (2019–2020)
+        │
+        ▼
+  /predict response (point estimate + intervals + risk)
+```
+
+---
+
+## Model Performance
+
+Evaluated on the held-out test set (2021–2022, ~30 rows).
+
+| Metric | Value |
+|--------|-------|
+| R² | 0.9145 |
+| RMSE | 0.233 t/ha |
+| MAE | 0.173 t/ha |
+
+Conformal prediction intervals (calibrated on 2019–2020 val set):
+
+| Coverage | Half-width |
+|----------|-----------|
+| 80 % | ±0.317 t/ha |
+| 90 % | ±0.523 t/ha |
+| 95 % | ±0.622 t/ha |
+
+> **Note:** ~180 total panel rows; metric variance is high at this sample size. Interpret R² with caution.
 
 ---
 
@@ -41,91 +159,168 @@ backend/models/    Trained artifacts (student_lightgbm, preprocessor, FE)
 
 ```
 Crop_Yield_System/
-├── Procfile                         # Deployment entry point (uvicorn backend.api:app)
-├── render.yaml                      # Render.com service config
-├── build.sh                         # Artifact fetch script (downloads models.zip from S3)
+├── Procfile                          # Render entry point (uvicorn backend.api:app)
+├── render.yaml                       # Render service config
+├── build.sh                          # Fetches model artifacts from remote storage
 │
-├── backend/                         # All server-side code and artifacts
-│   ├── api.py                       # FastAPI app — /health /metrics /predict /predict/batch
-│   ├── requirements_api.txt         # Deps to run api.py
-│   ├── requirements.txt             # Full ML pipeline deps
+├── backend/
+│   ├── api.py                        # FastAPI app — /health /metrics /predict /predict/batch
+│   ├── requirements.txt              # Full ML + API dependencies
 │   ├── conifgs/
-│   │   └── config.example.yaml      # Copy to config.yaml and fill in local paths
+│   │   └── config.example.yaml       # Copy → config.yaml and fill local paths
 │   │
 │   ├── ml/
 │   │   ├── src/
-│   │   │   ├── feature_engineering.py   # Leakage-safe FE (fit on train only)
-│   │   │   ├── inference/
-│   │   │   │   └── predict.py           # run_prediction() — core inference function
-│   │   │   ├── explainer/               # SHAP explainability
-│   │   │   └── ...                      # ingest, merge, splitter, outlier, etc.
-│   │   ├── steps/                       # ZenML @step functions
-│   │   └── pipelines/
-│   │       └── training_pipeline.py     # Canonical training DAG
+│   │   │   ├── feature_engineering.py    # Leakage-safe FE (fit on train only)
+│   │   │   ├── inference/predict.py      # run_prediction() — core inference
+│   │   │   └── explainer/                # SHAP explainability
+│   │   ├── steps/                        # ZenML @step functions
+│   │   └── pipelines/training_pipeline.py
 │   │
-│   ├── models/                          # Trained artifacts
+│   ├── models/                       # Trained artifacts (not committed — fetched by build.sh)
 │   │   ├── student_lightgbm.joblib
 │   │   ├── preprocessor.joblib
 │   │   ├── feature_engineering.joblib
 │   │   └── conformal_quantiles.json
 │   │
-│   ├── scripts/
-│   │   └── run_pipeline.py              # Entry point: python backend/scripts/run_pipeline.py
-│   │
-│   ├── evaluation/
-│   │   ├── evaluation_report.json
-│   │   └── evaluation_predictions.csv
-│   │
-│   └── data/
-│       ├── raw/                         # NASA POWER weather, NDVI, SOC, yield CSV
-│       └── Processed/                   # Merged panel dataset
+│   ├── scripts/run_pipeline.py       # Entry point for training
+│   └── evaluation/
+│       ├── evaluation_report.json
+│       └── evaluation_predictions.csv
 │
-└── frontend/                        # React + Vite + Firebase
+└── frontend/
     └── src/
-        ├── App.tsx
-        └── services/predictionService.ts
+        ├── App.tsx                   # All UI — Home, Predict, Dashboard, Admin
+        ├── firebase.ts               # Firebase initialisation
+        ├── firebase-applet-config.json
+        └── services/predictionService.ts   # API client
 ```
 
 ---
 
-## Quickstart
+## Running Locally
 
-### 1. Install API dependencies
+### Prerequisites
+
+- Python 3.10
+- Node.js 18+
+- A Firebase project with Google Auth and Firestore enabled
+
+---
+
+### 1. Clone the repository
 
 ```bash
-pip install -r backend/requirements_api.txt
+git clone https://github.com/Alfeenubaidh/crop_prediction_model.git
+cd crop_prediction_model
 ```
 
-### 2. Start the inference API
+### 2. Backend — install dependencies
 
 ```bash
-uvicorn backend.api:app --port 8000
+pip install -r backend/requirements.txt
 ```
 
-Health check:
+### 3. Backend — set up config and model artifacts
+
+Copy the example config and fill in your local data paths:
+
+```bash
+cp backend/conifgs/config.example.yaml config.yaml
+```
+
+Place trained model artifacts in `backend/models/`:
+
+```
+backend/models/
+├── student_lightgbm.joblib
+├── preprocessor.joblib
+├── feature_engineering.joblib
+└── conformal_quantiles.json
+```
+
+If you have the `MODELS_ZIP_URL` environment variable set, `build.sh` fetches them automatically:
+
+```bash
+MODELS_ZIP_URL=<your-url> bash build.sh
+```
+
+### 4. Backend — start the API
+
+```bash
+uvicorn backend.api:app --reload --host 0.0.0.0 --port 8000
+```
+
+Verify it is running:
 
 ```bash
 curl http://localhost:8000/health
 # {"status":"ok","artifacts":{"model":true,"encoder":true,"feature_engineering":true}}
 ```
 
-### 3. Start the frontend
+Interactive API docs are available at http://localhost:8000/docs.
+
+### 5. Frontend — install dependencies
 
 ```bash
 cd frontend
 npm install
-npm run dev          # http://localhost:3000
 ```
 
-The frontend reads `VITE_API_URL` from `frontend/.env.local`:
+### 6. Frontend — configure environment
 
-```
+Create `frontend/.env.local`:
+
+```env
 VITE_API_URL=http://localhost:8000
+```
+
+Place your Firebase web config in `frontend/src/firebase-applet-config.json`:
+
+```json
+{
+  "projectId": "YOUR_PROJECT_ID",
+  "appId": "YOUR_APP_ID",
+  "apiKey": "YOUR_API_KEY",
+  "authDomain": "YOUR_AUTH_DOMAIN",
+  "firestoreDatabaseId": "YOUR_FIRESTORE_DB_ID",
+  "storageBucket": "YOUR_STORAGE_BUCKET",
+  "messagingSenderId": "YOUR_SENDER_ID",
+  "measurementId": ""
+}
+```
+
+### 7. Frontend — start the dev server
+
+```bash
+npm run dev
+# http://localhost:3000
 ```
 
 ---
 
-## API
+### (Optional) Re-train the model
+
+Requires raw data files configured in `config.yaml`:
+
+```bash
+python backend/scripts/run_pipeline.py
+```
+
+Pipeline stages (leakage-safe, temporal order):
+
+1. **Ingest** — NASA POWER weather, NDVI, SOC, yield CSV
+2. **Merge** — join all sources into a single panel
+3. **Split** — temporal split by year (no shuffle)
+4. **Missing values** — fit on train, transform all splits
+5. **Outliers** — IQR group-wise, fit on train only
+6. **Feature engineering** — fit on train; lag-aware transform for val / test
+7. **Train** — teacher stacking → student LightGBM distillation
+8. **Evaluate** — RMSE / R² / MAE + conformal intervals on test set
+
+---
+
+## API Reference
 
 ### `POST /predict`
 
@@ -144,8 +339,7 @@ VITE_API_URL=http://localhost:8000
 }
 ```
 
-All climate fields are optional — missing values are filled from training-set
-group means by the fitted `FeatureEngineering` object.
+Climate fields are optional — missing values are filled from training-set group means.
 
 **Response**
 
@@ -179,60 +373,33 @@ Returns the latest `evaluation/evaluation_report.json`.
 
 ---
 
-## Training Pipeline
+## Supported States & Seasons
 
-Requires `config.yaml` (copy from `conifgs/config.example.yaml` and set local
-paths to raw data).
-
-```bash
-pip install -r backend/requirements.txt
-python backend/scripts/run_pipeline.py
-```
-
-Pipeline order (leakage-safe):
-
-1. **Ingest** — NASA POWER weather, NDVI, SOC, yield CSV
-2. **Merge** — join all sources into a single panel
-3. **Split** — temporal split by year (no shuffle)
-4. **Missing values** — fit on train, transform all splits
-5. **Outliers** — IQR-groupwise, fit on train only
-6. **Feature engineering** — fit on train, `lag_history`-aware transform for val/test
-7. **Train** — teacher stacking → student LightGBM distillation
-8. **Evaluate** — RMSE / R² / MAE + conformal intervals on test set
-
----
-
-## Supported States
-
-| State | Season |
-|-------|--------|
+| State | Seasons |
+|-------|---------|
 | Punjab | Rabi, Kharif |
 | Haryana | Rabi, Kharif |
 | Rajasthan | Rabi, Kharif |
 | Uttar Pradesh | Rabi, Kharif |
-| Chandigarh | Reference only — insufficient test rows |
 
-Data range: **2011–2022** (~180 panel rows). Metric variance is high at this
-sample size; interpret R² with caution.
-
----
-
-## Feature Engineering Highlights
-
-- NDVI × climate interaction terms (NDVI_Rain, NDVI_Temp, NDVI_Rain_Hybrid)
-- NDVI and Rain anomalies relative to group (State × Season) medians
-- SOC × NDVI hybrid and stress indicators
-- Season one-hot encoding (Kharif / Rabi / Zaid)
-- Temporal lag features: Yield_Lag1/2, NDVI_Lag1/2, Rain_Lag1/2
-- Rolling statistics (3-year window) for yield, NDVI, rainfall
-- Compound stress flag (NDVI and Rain both below group median)
-
-All statistics used in feature engineering (group medians, SOC max, rain max)
-are fitted on the training split only and serialised to
-`models/feature_engineering.joblib`.
+Data range: 2011–2022.
 
 ---
 
 ## Citation
 
-See `CITATION.cff`.
+```bibtex
+@software{alfeen2026agropredict,
+  author  = {Alfeen, Ubaidh},
+  title   = {Explainable Crop Yield Prediction Using Earth Observation Data},
+  year    = {2026},
+  url     = {https://github.com/Alfeenubaidh/crop_prediction_model},
+  license = {Apache-2.0}
+}
+```
+
+---
+
+## License
+
+Apache 2.0 — see [CITATION.cff](CITATION.cff) for full details.
