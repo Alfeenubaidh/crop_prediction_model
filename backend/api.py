@@ -25,7 +25,12 @@ if str(ROOT) not in sys.path:
 from ml.src.inference.predict import run_prediction
 
 # ── logging ──────────────────────────────────────────────────────────────────
-logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)s  %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+    stream=sys.stdout,
+)
 logger = logging.getLogger(__name__)
 
 # ── paths ────────────────────────────────────────────────────────────────────
@@ -247,6 +252,8 @@ def predict(request: PredictRequest):
     training group means when no lag history is provided — the model
     degrades gracefully for cold-start inputs.
     """
+    import time
+    t0 = time.monotonic()
     try:
         features = _to_dataframe(request)
         output_df, _, _ = run_prediction(
@@ -256,7 +263,14 @@ def predict(request: PredictRequest):
             config=_cfg,
             lag_history=None,
         )
-        return _format_response(output_df.iloc[0], request)
+        response = _format_response(output_df.iloc[0], request)
+        elapsed_ms = round((time.monotonic() - t0) * 1000, 1)
+        logger.info(
+            "PREDICT  state=%s  season=%s  year=%d  yield=%.4f  response_time_ms=%.1f",
+            request.state.upper(), request.season, request.year,
+            response.predicted_yield, elapsed_ms,
+        )
+        return response
 
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
