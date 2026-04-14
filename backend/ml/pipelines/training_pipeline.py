@@ -69,7 +69,7 @@ def training_pipeline(config: dict):
         y_val=y_val,
         X_test=X_test,
         y_test=y_test,
-        train_df_raw=train_ol,   # full train rows (with Yield) — used to save fitted FE for inference
+        train_df_raw=train_ol,
     )
 
     export_test_set_step(

@@ -1,6 +1,6 @@
 from zenml import pipeline
-from ml.steps.predictor_step import predictor_step
-from ml.steps.load_inference_data_step import load_inference_data_step
+from steps.predictor_step import predictor_step
+from steps.load_inference_data_step import load_inference_data_step
 from steps.shap_explainer_step import shap_explainer_step
 
 
