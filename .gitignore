@@ -73,3 +73,5 @@ frontend/.env.local
 frontend/firebase-applet-config.json
 frontend/firebase-blueprint.json
 frontend/metadata.json
+
+backend/artifacts/
