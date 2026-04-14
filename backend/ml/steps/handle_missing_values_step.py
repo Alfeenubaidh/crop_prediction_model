@@ -18,7 +18,7 @@ def handle_missing_values_step(
     """
     Fit imputation on training data only; transform train, validation, and test.
     """
-    cfg = config or load_config("conifgs/config.yaml")
+    cfg = config or load_config("configs/config.yaml")
     handler = MissingValueHandler(cfg)
     handler.fit(train_df)
 

@@ -18,7 +18,7 @@ def export_test_set_step(
     # --------------------------------------------------
     # Load config inside step (ZenML-safe)
     # --------------------------------------------------
-    config = load_config("conifgs/config.yaml")
+    config = load_config("configs/config.yaml")
 
     try:
         root_dir = config["paths"]["project_root"]

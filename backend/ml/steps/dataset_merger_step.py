@@ -14,7 +14,7 @@ def merge_data(
     yield_df: pd.DataFrame,
     config: dict | None = None,
 ) -> pd.DataFrame:
-    cfg = config or load_config("conifgs/config.yaml")
+    cfg = config or load_config("configs/config.yaml")
     print("[merge_data] weather_seasonal shape:", weather_seasonal.shape)
     print("[merge_data] ndvi shape:", ndvi.shape)
     print("[merge_data] soc shape:", soc.shape)

@@ -29,7 +29,7 @@ def feature_engineering_step(
     if train_df is None or train_df.empty:
         raise ValueError("feature_engineering_step received EMPTY train_df")
 
-    cfg = config or load_config("conifgs/config.yaml")
+    cfg = config or load_config("configs/config.yaml")
     target = cfg["data_sources"]["yield"].get("target_column", "Yield")
 
     if target not in train_df.columns:

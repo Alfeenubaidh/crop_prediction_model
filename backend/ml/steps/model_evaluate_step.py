@@ -15,7 +15,7 @@ from zenml.logger import get_logger
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 logger = get_logger(__name__)
-CONFIG_PATH = "conifgs/config.yaml"
+CONFIG_PATH = "configs/config.yaml"
 
 
 @step(enable_cache=False)

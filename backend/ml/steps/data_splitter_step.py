@@ -20,7 +20,7 @@ def data_split_step(
             "data_split_step received an EMPTY dataframe. Check merge / ingestion."
         )
 
-    cfg = config or load_config("conifgs/config.yaml")
+    cfg = config or load_config("configs/config.yaml")
     split_cfg = DataSplitterConfig(cfg=cfg)
     splitter = DataSplitter(split_cfg)
 

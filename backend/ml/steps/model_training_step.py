@@ -26,7 +26,7 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 
 logger = get_logger(__name__)
-CONFIG_PATH = "conifgs/config.yaml"
+CONFIG_PATH = "configs/config.yaml"
 
 
 def _make_onehot_encoder():
